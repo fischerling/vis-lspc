@@ -1,4 +1,6 @@
-# vis-lspc - language server protocol client for the vis editor
+# vis-lspc
+
+A language server protocol client for the [vis editor](https://github.com/martanne/vis).
 
 ## Whats working
 
