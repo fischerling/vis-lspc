@@ -3,11 +3,11 @@
 ## Whats working
 
 vis-lspc currently supports:
-	* `textDocument/completion`
-	* `textDocument/declaration`
-	* `textDocument/definition`
-	* `textDocument/typeDefinition`
-	* `textDocument/implementation`
+* `textDocument/completion`
+* `textDocument/declaration`
+* `textDocument/definition`
+* `textDocument/typeDefinition`
+* `textDocument/implementation`
 
 ## Whats not working
 
