@@ -55,7 +55,6 @@ do
   end
 end
 
-
 -- state of our language server client
 lspc = {
   running = {},
@@ -215,6 +214,22 @@ local function ls_rpc(ls, req)
   ls.fd:flush()
 end
 
+-- send a rpc notification to a language server
+local function ls_send_notification(ls, method, params)
+  ls_rpc(ls, {method = method, params = params})
+end
+
+local function ls_send_did_change(ls, file)
+  lspc.log('send didChange')
+  local new_version = assert(ls.open_files[file.path]).version + 1
+  ls.open_files[file.path].version = new_version
+
+  local document = {uri = path_to_uri(file.path), version = new_version}
+  local changes = {{text = file:content(0, file.size)}}
+  local params = {textDocument = document, contentChanges = changes}
+  ls_send_notification(ls, 'textDocument/didChange', params)
+end
+
 -- send a rpc method call to a language server
 local function ls_call_method(ls, method, params, win)
   local id = ls.id
@@ -229,9 +244,14 @@ local function ls_call_method(ls, method, params, win)
   ls.inflight[id].win = win
 end
 
--- send a rpc notification to a language server
-local function ls_send_notification(ls, method, params)
-  ls_rpc(ls, {method = method, params = params})
+-- call textDocument/<method> and send a didChange notification upfront
+-- to make sure the server sees our current state.
+-- This is not ideal since we are sending more data than needed and
+-- the  server has less time to parse the new file content and do its work
+-- resulting in longer stalls after method invocation.
+local function ls_call_text_document_method(ls, method, params, win)
+  ls_send_did_change(ls, win.file)
+  ls_call_method(ls, 'textDocument/' .. method, params, win)
 end
 
 local function lspc_handle_goto_method_response(method, result)
@@ -574,7 +594,7 @@ local function lspc_method_textDocumentPositionParams(ls, method, win)
 
   local params = vis_doc_pos_to_lsp(vis_get_doc_pos(win))
 
-  ls_call_method(ls, 'textDocument/' .. method, params, win)
+  ls_call_text_document_method(ls, method, params, win)
 end
 
 local function lspc_declaration(ls, win)
