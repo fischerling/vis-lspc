@@ -15,12 +15,11 @@ vis-lspc currently supports:
 
 Everything else.
 
-Especially `textDocument/didChange` must be implemented before vis-lspc is somewhat usable.
-To my knowledge the is currently no good way to detect file changes vis the Lua API.
+To my knowledge there is currently no good way to detect file changes via the Lua API.
 But this is essential to support [Text Synchronization](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textSynchronization) which is required by the
 LSP protocol.
 
-A dirty workaround could be to send the whole file content in a `textDocument/didChange`
+A dirty workaround we currently use is to send the whole file content in a `textDocument/didChange`
 method call before calling any other method.
 If someone can come up with an idea how to solve this I would appreciate contributions.
 
