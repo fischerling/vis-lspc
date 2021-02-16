@@ -48,7 +48,7 @@ do
       return
     end
 
-    log_fd = assert(io.open('vis-lspc.log', 'w'))
+    log_fd = assert(io.open(lspc.log_file, 'w'))
     lspc.log = log
 
     log(msg)
@@ -60,7 +60,9 @@ lspc = {
   running = {},
   name = 'vis-lspc',
   version = '0.0.1',
+  -- write log messages to lspc.log_file
   logging = true,
+  log_file = 'vis-lspc.log',
   log = init_logging,
 }
 
