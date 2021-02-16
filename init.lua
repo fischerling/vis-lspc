@@ -64,6 +64,8 @@ lspc = {
   logging = true,
   log_file = 'vis-lspc.log',
   log = init_logging,
+  -- automatically start a language server when a new window is opened
+  autostart = true,
 }
 
 local clangd = {name = 'clangd', cmd = 'clangd'}
@@ -515,15 +517,19 @@ vis:command_register('lspc-shutdown-server', function(argv, _, win)
   ls_shutdown_server(ls)
 end)
 
-local function ls_start_server(syntax)
+local function ls_start_server(syntax, quiet)
   if lspc.running[syntax] then
-    vis:info('Error: Already a language server running for ' .. syntax)
+    if not quiet then
+      vis:info('Error: Already a language server running for ' .. syntax)
+    end
     return
   end
 
   local ls_conf = lspc.ls_map[syntax]
   if not ls_conf then
-    vis:info('Error: No language server available for ' .. syntax)
+    if not quiet then
+      vis:info('Error: No language server available for ' .. syntax)
+    end
     return
   end
 
@@ -579,6 +585,14 @@ end
 
 vis:command_register('lspc-start-server', function(argv, _, win)
   ls_start_server(argv[1] or win.syntax)
+end)
+
+vis.events.subscribe(vis.events.WIN_OPEN, function(win)
+  if not lspc.autostart then
+    return
+  end
+
+  ls_start_server(win.syntax, true)
 end)
 
 local function lspc_method_textDocumentPositionParams(ls, method, win)
