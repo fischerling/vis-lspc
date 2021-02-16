@@ -8,6 +8,7 @@ vis-lspc currently supports:
 * `textDocument/completion`
 * `textDocument/declaration`
 * `textDocument/definition`
+* `textDocument/references`
 * `textDocument/typeDefinition`
 * `textDocument/implementation`
 
@@ -32,19 +33,6 @@ Currently only clangd is available and somewhat tested.
 There should be a mapping between vis syntax/lexer names and LSP [languageId](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem).
 For example the syntax for C code in vis is called 'ansi_c' and in LSP 'c'.
 
-## Usage
-
-Note that till `textDocument/didChange` is implemented vis-lspc is hardly usable.
-But if you are brave there are some default key bindings:
-
-	Normal mode:
-	<F2> - start a language server for win.syntax
-	<F3> - open win.file with a running language server
-	<C-]> - jump to the definition of the symbol under the main cursor
-	<C-t> - go back in the jump history
-	Normal and Insert mode:
-	<C- > - get completions
-
 ## Requirements
 
 * vis must be compiled with the Lua [communicate API](https://github.com/martanne/vis/pull/675).
@@ -56,6 +44,56 @@ But if you are brave there are some default key bindings:
 
 1. Clone this repository into your vis plugins directory
 2. Load the plugin in your `visrc.lua` with `require('plugins/vis-lspc')`
+
+
+## Usage
+
+Note that till `textDocument/didChange` is implemented vis-lspc is hardly usable.
+But if you are brave there are some default key bindings:
+
+### Default Bindings
+
+	Normal mode:
+	<F2> - start a language server for win.syntax
+	<F3> - open win.file with a running language server
+	<C-]> - jump to the definition of the symbol under the main cursor
+	<C-t> - go back in the jump history
+	Normal and Insert mode:
+	<C- > - get completions
+
+
+### Available commands
+
+	# language-server management:
+	lspc-start-server [syntax] - start a language server for syntax or win.syntax
+	lspc-stop-server [syntax] - stop the language server for syntax or win.syntax
+
+	# file registration:
+	lspc-open - register the file in the current window
+	lspc-close - unregister the file in the current window
+
+	# navigation commands (they all operate on the symbol under the main cursor):
+	lspc-completion - syntax completion
+	lspc-references [e | vsplit | hsplit] - select and open a reference
+	lspc-declaration [e | vsplit | hsplit] - select and open a declaration
+	lspc-definition [e | vsplit | hsplit] - open the definition
+	lspc-typeDeclaration [e | vsplit | hsplit] - select and open a type declaration
+	lspc-implementation [e | vsplit | hsplit] - I actually have no idea what this does
+
+	lspc-back - navigate back in the goto history
+
+### Available configuration fields
+
+The module table returned by `require('plugins/vis-lspc')` can be use to configure
+some aspects of vis-lspc.
+
+Available fields are:
+
+* `name = 'vis-lspc'` - the name vis-lspc introduces itself to a language server
+* `logging = false` - enable logging only useful for debugging vis-lspc
+* `log_file = 'vis-lspc.log'` - file vis-lspc writes all log messages to
+* `autostart = true` - try to start a language server in WIN_OPEN
+* `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
 
 ## License
 
