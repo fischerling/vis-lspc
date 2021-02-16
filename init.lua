@@ -59,7 +59,7 @@ end
 lspc = {
   running = {},
   name = 'vis-lspc',
-  version = '0.0.1',
+  version = '0.1.0',
   -- write log messages to lspc.log_file
   logging = false,
   log_file = 'vis-lspc.log',
