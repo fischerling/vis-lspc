@@ -443,6 +443,10 @@ local function ls_recv_data(ls, data)
   if ls.partial_response.len == 0 then
     lspc.log('LSPC: parse new message')
     local header = data:match('^Content%-Length: %d+')
+    if not header then
+      vis:message('LSPC Error: received unexpected message: ' .. data)
+      return
+    end
     ls.partial_response.exp_len = tonumber(header:match('%d+'))
     local _, content_start = data:find('\r\n\r\n')
 
