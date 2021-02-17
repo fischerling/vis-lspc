@@ -40,6 +40,7 @@ do
   local log_fd
   local function log(msg)
     log_fd:write(msg)
+    log_fd:write('\n')
     log_fd:flush()
   end
 
@@ -269,7 +270,7 @@ local function ls_rpc(ls, req)
 
   local header_part = 'Content-Length: ' .. tostring(content_len)
   local msg = header_part .. '\r\n\r\n' .. content_part
-  lspc.log('LSPC Sending: ' .. msg .. '\n')
+  lspc.log('LSPC Sending: ' .. msg)
 
   ls.fd:write(msg)
   ls.fd:flush()
@@ -461,7 +462,7 @@ local function ls_recv_data(ls, data)
   local complete_msg = ls.partial_response.msg:sub(1,
                                                    ls.partial_response.exp_len)
 
-  lspc.log('LSPC: handling complete message:\n' .. complete_msg .. '\n')
+  lspc.log('LSPC: handling complete message: ' .. complete_msg)
   local resp = json.decode(complete_msg)
   ls_handle_msg(ls, resp)
 
@@ -470,7 +471,7 @@ local function ls_recv_data(ls, data)
   if leftover > 0 then
     local leftover_data = ls.partial_response.msg:sub(
                               ls.partial_response.exp_len + 1)
-    lspc.log('LSPC: parse leftover:\n"' .. leftover_data .. '"\n')
+    lspc.log('LSPC: parse leftover: "' .. leftover_data .. '"')
 
     ls.partial_response.exp_len = 0
     ls.partial_response.len = 0
@@ -483,13 +484,13 @@ end
 
 -- check if a language server is running and initialized
 local function lspc_get_usable_ls(syntax)
-  local ls = lspc.running[syntax]
   if not ls then
     return nil, 'Error: No language server running for ' .. syntax
   end
 
   if not ls.initialized then
-    return nil, 'Error: Language server not initialized yet. Please try again'
+    return nil, 'Error: Language server for ' .. syntax ..
+               ' not initialized yet. Please try again'
   end
 
   return ls
@@ -593,7 +594,7 @@ local function ls_start_server(syntax)
       return
     end
 
-    lspc.log('LS response(' .. event .. '): ' .. msg .. '\n')
+    lspc.log('LS response(' .. event .. '): ' .. msg)
     if event == 'STDERR' then
       return
     end
