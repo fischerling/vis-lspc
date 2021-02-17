@@ -154,6 +154,7 @@ local function vis_open_doc_pos(doc_pos, cmd)
   assert(cmd)
   vis:command(string.format('%s \'%s\'', cmd, doc_pos.file))
   vis.win.selection:to(doc_pos.line, doc_pos.col)
+  vis:command('lspc-open')
 end
 
 -- Support jumping between document positions
