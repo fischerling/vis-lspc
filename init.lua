@@ -722,7 +722,12 @@ vis:command_register('lspc-completion', function(_, _, win)
 end)
 
 vis:command_register('lspc-start-server', function(argv, _, win)
-  local _, err = ls_start_server(argv[1] or win.syntax)
+  local syntax = argv[1] or win.syntax
+  if not syntax then
+    vis:info('Error: no language specified')
+  end
+
+  local _, err = ls_start_server(syntax)
   if err then
     vis:info(err)
   end
@@ -762,7 +767,7 @@ end)
 -- vis-lspc event hooks
 
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
-  if lspc.autostart then
+  if lspc.autostart and win.syntax then
     ls_start_server(win.syntax, true)
   end
 end)
