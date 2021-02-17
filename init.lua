@@ -58,6 +58,7 @@ end
 
 -- state of our language server client
 lspc = {
+  -- mapping language server names to their state tables
   running = {},
   name = 'vis-lspc',
   version = '0.1.0',
@@ -77,11 +78,28 @@ if os.execute('type fzf >/dev/null 2>/dev/null') then
   lspc.menu_cmd = 'fzf'
 end
 
+-- mapping function between vis lexer names and LSP languageIds
+local function syntax_to_languageId(syntax)
+  if syntax == 'ansi_c' then
+    return 'c'
+  end
+  return syntax
+end
+
 -- clangd language server configuration
 local clangd = {name = 'clangd', cmd = 'clangd'}
 
 -- map of known language servers per syntax
 lspc.ls_map = {cpp = clangd, ansi_c = clangd}
+
+-- return the name of the language server for this syntax
+local function get_ls_name_for_syntax(syntax)
+  local ls_def = lspc.ls_map[syntax]
+  if not ls_def then
+    return nil, 'No language server available for ' .. syntax
+  end
+  return ls_def.name
+end
 
 -- Document position code
 -- https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams
@@ -409,9 +427,9 @@ local function ls_handle_method_response(ls, method_response)
     ls.fd:close()
 
     -- remove the ls from lspc.running
-    for syntax, rls in pairs(lspc.running) do
+    for ls_name, rls in pairs(lspc.running) do
       if ls == rls then
-        lspc.running[syntax] = nil
+        lspc.running[ls_name] = nil
         break
       end
     end
@@ -489,6 +507,12 @@ end
 
 -- check if a language server is running and initialized
 local function lspc_get_usable_ls(syntax)
+  local ls_name, err = get_ls_name_for_syntax(syntax)
+  if err then
+    return nil, err
+  end
+
+  local ls = lspc.running[ls_name]
   if not ls then
     return nil, 'Error: No language server running for ' .. syntax
   end
@@ -521,7 +545,7 @@ local function lspc_open(ls, win, file)
   local params = {
     textDocument = {
       uri = 'file://' .. file.path,
-      languageId = win.syntax,
+      languageId = syntax_to_languageId(win.syntax),
       version = 0,
       text = file:content(0, file.size),
     },
@@ -560,13 +584,13 @@ local function ls_shutdown_server(ls)
 end
 
 local function ls_start_server(syntax)
-  if lspc.running[syntax] then
-    return nil, 'Error: Already a language server running for ' .. syntax
-  end
-
   local ls_conf = lspc.ls_map[syntax]
   if not ls_conf then
     return nil, 'Error: No language server available for ' .. syntax
+  end
+
+  if lspc.running[ls_conf.name] then
+    return nil, 'Error: Already a language server running for ' .. syntax
   end
 
   local ls = {
@@ -580,7 +604,7 @@ local function ls_start_server(syntax)
 
   ls.fd = vis:communicate(ls_conf.name, ls_conf.cmd)
 
-  lspc.running[syntax] = ls
+  lspc.running[ls_conf.name] = ls
 
   -- register the response handler
   vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, msg, event)
@@ -595,7 +619,7 @@ local function ls_start_server(syntax)
         vis:info('language server received signal: ' .. msg)
       end
 
-      lspc.running[syntax] = nil
+      lspc.running[ls.name] = nil
       return
     end
 
