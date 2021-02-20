@@ -102,6 +102,7 @@ Please have a look at #2 and share your configuration with everyone else.
 A language server configuration is a Lua table containing a `name` field which is
 used to manage the language server.
 And a `cmd` field which is used to start the language server.
+
 **Note:** the language server must communicate with vis-lspc via stdio.
 Your language server probably supports stdio but maybe requires a [special
 command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
