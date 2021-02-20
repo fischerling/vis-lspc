@@ -107,6 +107,7 @@ Your language server probably supports stdio but maybe requires a [special
 command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
 
 **Example:** The language server configuration for clangd and its entries in `ls_map`
+
 	-- clangd language server configuration
 	local clangd = {name = 'clangd', cmd = 'clangd'}
 
