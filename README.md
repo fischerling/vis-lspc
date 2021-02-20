@@ -30,12 +30,10 @@ Communicating with language-servers via other channels than stdin/stdout.
 
 Currently only clangd is available and somewhat tested.
 
-There should be a mapping between vis syntax/lexer names and LSP [languageId](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentItem).
-For example the syntax for C code in vis is called 'ansi_c' and in LSP 'c'.
-
 ## Requirements
 
 * vis must be compiled with the Lua [communicate API](https://github.com/martanne/vis/pull/675).
+* The language server you want to use. [Microsoft's list of implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/)
 * Optional: the json implementation of your choice
 	* must be usable by calling `require('json')`
 	* must provide `json.encode, json.decode`
@@ -45,11 +43,9 @@ For example the syntax for C code in vis is called 'ansi_c' and in LSP 'c'.
 1. Clone this repository into your vis plugins directory
 2. Load the plugin in your `visrc.lua` with `require('plugins/vis-lspc')`
 
-
 ## Usage
 
-Note that till `textDocument/didChange` is implemented vis-lspc is hardly usable.
-But if you are brave there are some default key bindings:
+vis-lspc is in a early state, but if you are brave there are some default key bindings:
 
 ### Default Bindings
 
@@ -94,6 +90,28 @@ Available fields are:
 * `log_file = 'vis-lspc.log'` - file vis-lspc writes all log messages to
 * `autostart = true` - try to start a language server in WIN_OPEN
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
+* `ls_map` - a table mapping vis syntax names to language server configurations
+
+#### Configure your own Language Server
+
+If vis-lspc has no language server configuration for your desired language or server
+you have to create a language server configuration and insert it into the `ls_map`
+table.
+Please have a look at #2 and share your configuration with everyone else.
+
+A language server configuration is a Lua table containing a `name` field which is
+used to manage the language server.
+And a `cmd` field which is used to start the language server.
+**Note:** the language server must communicate with vis-lspc via stdio.
+Your language server probably supports stdio but maybe requires a [special
+command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
+
+**Example:** The language server configuration for clangd and its entries in `ls_map`
+	-- clangd language server configuration
+	local clangd = {name = 'clangd', cmd = 'clangd'}
+
+	-- map of known language servers per syntax
+	lspc.ls_map = {cpp = clangd, ansi_c = clangd}
 
 ## License
 
