@@ -637,6 +637,20 @@ local function ls_start_server(syntax)
     return nil, 'No language server available for ' .. syntax
   end
 
+  local exe = ls_conf.cmd:gmatch('%S+')()
+  if not os.execute('type ' .. exe .. '>/dev/null 2>/dev/null') then
+    -- remove the configured language server
+    lspc.ls_map[syntax] = nil
+    local msg = string.format(
+                    'Language server for %s configured but %s not found',
+                    syntax, exe)
+    -- the warning will be visual if the language server was automatically startet
+    -- if the user tried to start teh server manually they will see msg as error
+    lspc_warn(msg)
+    return nil, msg
+
+  end
+
   if lspc.running[ls_conf.name] then
     return nil, 'Already a language server running for ' .. syntax
   end
