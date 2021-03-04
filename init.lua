@@ -1,8 +1,16 @@
 -- Copyright (c) 2021 Florian Fischer. All rights reserved.
 -- Use of this source code is governed by a MIT license found in the LICENSE file.
 -- We require vis compiled with the communicate patch
+local function lspc_warn(msg)
+  vis:info('LSPC Warning: ' .. msg)
+end
+
+local function lspc_err(msg)
+  vis:info('LSPC Error: ' .. msg)
+end
+
 if not vis.communicate then
-  vis:info('Error: language server support requires vis communicate patch')
+  lspc_err('language server support requires vis communicate patch')
   return {}
 end
 
@@ -343,7 +351,7 @@ end
 
 local function lspc_handle_goto_method_response(req, result, win)
   if not result or next(result) == nil then
-    vis:info('LSPC Warning: ' .. req.method .. ' found no results')
+    lspc_warn(req.method .. ' found no results')
     return
   end
 
@@ -372,7 +380,7 @@ end
 
 local function lspc_handle_completion_method_response(win, result)
   if not result or not result.items then
-    vis:info('LSPC Warning: no completion available')
+    lspc_warn('no completion available')
     return
   end
 
@@ -434,7 +442,7 @@ local function ls_handle_method_response(ls, method_response)
       end
     end
   else
-    vis:info('Warning: received unknown method ' .. method)
+    lspc_warn('received unknown method ' .. method)
   end
 
   ls.inflight[method_response.id] = nil
@@ -462,7 +470,7 @@ local function ls_recv_data(ls, data)
     lspc.log('LSPC: parse new message')
     local header = data:match('^Content%-Length: %d+')
     if not header then
-      vis:message('LSPC Error: received unexpected message: ' .. data)
+      lspc_err('received unexpected message: ' .. data)
       return
     end
     ls.partial_response.exp_len = tonumber(header:match('%d+'))
@@ -514,11 +522,11 @@ local function lspc_get_usable_ls(syntax)
 
   local ls = lspc.running[ls_name]
   if not ls then
-    return nil, 'Error: No language server running for ' .. syntax
+    return nil, 'No language server running for ' .. syntax
   end
 
   if not ls.initialized then
-    return nil, 'Error: Language server for ' .. syntax ..
+    return nil, 'Language server for ' .. syntax ..
                ' not initialized yet. Please try again'
   end
 
@@ -527,7 +535,7 @@ end
 
 local function lspc_close(ls, file)
   if not ls.open_files[file.path] then
-    return 'Error: ' .. file.path .. ' not open'
+    return file.path .. ' not open'
   end
   ls_send_notification(ls, 'textDocument/didClose',
                        {textDocument = {uri = path_to_uri(file.path)}})
@@ -539,7 +547,7 @@ end
 local function lspc_open(ls, win, file)
   -- already opened
   if ls.open_files[file.path] then
-    return 'Error: ' .. file.path .. ' already open'
+    return file.path .. ' already open'
   end
 
   local params = {
@@ -586,11 +594,11 @@ end
 local function ls_start_server(syntax)
   local ls_conf = lspc.ls_map[syntax]
   if not ls_conf then
-    return nil, 'Error: No language server available for ' .. syntax
+    return nil, 'No language server available for ' .. syntax
   end
 
   if lspc.running[ls_conf.name] then
-    return nil, 'Error: Already a language server running for ' .. syntax
+    return nil, 'Already a language server running for ' .. syntax
   end
 
   local ls = {
@@ -648,8 +656,7 @@ end
 local function lspc_method_doc_pos(ls, method, win, argv)
   -- check if the language server has a provider for this method
   if not ls.capabilities[method .. 'Provider'] then
-    return 'LPSC Error: language server ' .. ls.name .. ' does not provide ' ..
-               method
+    return 'language server ' .. ls.name .. ' does not provide ' .. method
   end
 
   if not ls.open_files[win.file.path] then
@@ -684,7 +691,7 @@ local lspc_goto_location_methods = {
 vis:command_register('lspc-back', function()
   local err = vis_pop_doc_pos()
   if err then
-    vis:info(err)
+    lspc_err(err)
   end
 end)
 
@@ -692,7 +699,7 @@ for name, func in pairs(lspc_goto_location_methods) do
   vis:command_register('lspc-' .. name, function(argv, _, win)
     local ls, err = lspc_get_usable_ls(win.syntax)
     if err then
-      vis:info(err)
+      lspc_err(err)
       return
     end
 
@@ -703,7 +710,7 @@ for name, func in pairs(lspc_goto_location_methods) do
     local open_cmd = argv[1] or 'e'
     err = func(ls, win, open_cmd)
     if err then
-      vis:info(err)
+      lspc_err(err)
     end
   end)
 end
@@ -711,33 +718,32 @@ end
 vis:command_register('lspc-completion', function(_, _, win)
   local ls, err = lspc_get_usable_ls(win.syntax)
   if err then
-    vis:info(err)
+    lspc_err(err)
     return
   end
 
   err = lspc_method_doc_pos(ls, 'completion', win)
   if err then
-    vis:info(err)
+    lspc_err(err)
   end
 end)
 
 vis:command_register('lspc-start-server', function(argv, _, win)
   local syntax = argv[1] or win.syntax
   if not syntax then
-    vis:info('Error: no language specified')
+    lspc_err('no language specified')
   end
 
   local _, err = ls_start_server(syntax)
   if err then
-    vis:info(err)
+    lspc_err(err)
   end
 end)
 
 vis:command_register('lspc-shutdown-server', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
   if err then
-    vis:info(err)
-    vis:info('Error: no language server running')
+    lspc_err('no language server running: ' .. err)
     return
   end
 
@@ -747,7 +753,7 @@ end)
 vis:command_register('lspc-close', function(_, _, win)
   local ls, err = lspc_get_usable_ls(win.syntax)
   if err then
-    vis:info(err)
+    lspc_err(err)
     return
   end
 
@@ -757,7 +763,7 @@ end)
 vis:command_register('lspc-open', function(_, _, win)
   local ls, err = lspc_get_usable_ls(win.syntax)
   if err then
-    vis:info(err)
+    lspc_err(err)
     return
   end
 
