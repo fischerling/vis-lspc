@@ -378,7 +378,7 @@ local function lspc_handle_goto_method_response(req, result, win)
   vis_open_new_doc_pos(lsp_doc_pos_to_vis(lsp_doc_pos), req.ctx)
 end
 
-local function lspc_handle_completion_method_response(win, result)
+local function lspc_handle_completion_method_response(win, result, old_pos)
   if not result or not result.items then
     lspc_warn('no completion available')
     return
@@ -403,7 +403,47 @@ local function lspc_handle_completion_method_response(win, result)
 
   local completion = choices[choice]
 
-  vis_apply_textEdit(win, win.file, completion.textEdit)
+  if completion.textEdit then
+    vis_apply_textEdit(win, win.file, completion.textEdit)
+    return
+  end
+
+  if completion.insertText then
+    lspc.log(string.format('Completion old_pos=%d', old_pos))
+
+    -- Does our current state correspont to the state when the completion method
+    -- was called.
+    -- Otherwise we don't have a good way to apply the 'insertText' completion
+    if win.selection.pos ~= old_pos then
+      lspc_warn('can not apply textInsert because the cursor position changed')
+    end
+
+    local new_word = completion.insertText
+
+    local old_word_range = win.file:text_object_word(old_pos)
+    local old_word = win.file:content(old_word_range)
+
+    -- our curser is behind the token to complete
+    if old_word_range.finish - old_word_range.start == 1 then
+      if not new_word:sub(string.len(old_word)) ~= old_word then
+        lspc.log('Have to adjust the cursor position')
+      end
+
+      old_pos = old_pos - 1
+      old_word_range = win.file:text_object_word(old_pos)
+    end
+
+    -- apply insertText
+    win.file:delete(old_word_range)
+    local completion_start = old_word_range.start
+    win.file:insert(completion_start, completion.insertText)
+    win.selection.pos = completion_start + string.len(completion.insertText)
+    win:draw()
+    return
+  end
+
+  -- neither insertText nor textEdit where present
+  lspc_err('Unsupported completion')
 end
 
 -- method response dispatcher
@@ -428,7 +468,7 @@ local function ls_handle_method_response(ls, method_response)
     ls_send_notification(ls, 'initialized')
 
   elseif method == 'textDocument/completion' then
-    lspc_handle_completion_method_response(win, result)
+    lspc_handle_completion_method_response(win, result, req.ctx)
 
   elseif method == 'shutdown' then
     ls_send_notification(ls, 'exit')
@@ -722,7 +762,9 @@ vis:command_register('lspc-completion', function(_, _, win)
     return
   end
 
-  err = lspc_method_doc_pos(ls, 'completion', win)
+  -- remember the position where completions where requested
+  -- to apply insertText completions
+  err = lspc_method_doc_pos(ls, 'completion', win, win.selection.pos)
   if err then
     lspc_err(err)
   end
