@@ -97,8 +97,11 @@ end
 -- clangd language server configuration
 local clangd = {name = 'clangd', cmd = 'clangd'}
 
+-- pyls (python-language-server) language server configuration
+local pyls = {name = 'pyls', cmd = 'pyls'}
+
 -- map of known language servers per syntax
-lspc.ls_map = {cpp = clangd, ansi_c = clangd}
+lspc.ls_map = {cpp = clangd, ansi_c = clangd, python = pyls}
 
 -- return the name of the language server for this syntax
 local function get_ls_name_for_syntax(syntax)
