@@ -412,8 +412,6 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
   end
 
   if completion.insertText then
-    lspc.log(string.format('Completion old_pos=%d', old_pos))
-
     -- Does our current state correspont to the state when the completion method
     -- was called.
     -- Otherwise we don't have a good way to apply the 'insertText' completion
@@ -422,25 +420,49 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     end
 
     local new_word = completion.insertText
-
     local old_word_range = win.file:text_object_word(old_pos)
     local old_word = win.file:content(old_word_range)
 
-    -- our curser is behind the token to complete
-    if old_word_range.finish - old_word_range.start == 1 then
-      if not new_word:sub(string.len(old_word)) ~= old_word then
-        lspc.log('Have to adjust the cursor position')
-      end
+    lspc.log(string.format(
+                 'Completion old_pos=%d, old_range={start=%d, finish=%d}, old_word=%s',
+                 old_pos, old_word_range.start, old_word_range.finish,
+                 old_word:gsub('\n', '\\n')))
 
-      old_pos = old_pos - 1
-      old_word_range = win.file:text_object_word(old_pos)
+    -- update old_word_range and old_word and return if old_word is a prefix of the completion
+    local function does_completion_apply_to_pos(pos)
+      old_word_range = win.file:text_object_word(pos)
+      old_word = win.file:content(old_word_range)
+
+      local is_prefix = new_word:sub(1, string.len(old_word)) == old_word
+      return is_prefix
     end
 
+    -- search for a possible completion token which we should replace with this insertText
+    local matches = does_completion_apply_to_pos(old_pos)
+    if not matches then
+      lspc.log('Cursor looks like its not on the completion token')
+
+      -- try the common case the cursor is behind its completion token: fooba┃
+      local next_pos_candidate = old_pos - 1
+      matches = does_completion_apply_to_pos(next_pos_candidate)
+      if matches then
+        old_pos = next_pos_candidate
+      end
+    end
+
+    local completion_start
+    -- we found a completion token -> replace it
+    if matches then
+      lspc.log('replace the token: ' .. old_word ..
+                   '  we found being a prefix of the completion')
+      win.file:delete(old_word_range)
+      completion_start = old_word_range.start
+    else
+      completion_start = old_pos
+    end
     -- apply insertText
-    win.file:delete(old_word_range)
-    local completion_start = old_word_range.start
-    win.file:insert(completion_start, completion.insertText)
-    win.selection.pos = completion_start + string.len(completion.insertText)
+    win.file:insert(completion_start, new_word)
+    win.selection.pos = completion_start + string.len(new_word)
     win:draw()
     return
   end
