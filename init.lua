@@ -627,8 +627,9 @@ local function lspc_open(ls, win, file)
   ls.open_files[file.path] = {file = file, version = 0}
   ls_send_notification(ls, 'textDocument/didOpen', params)
 
-  vis.events.subscribe(vis.events.FILE_CLOSE, function(file)
-    for _, ls in pairs(lspc.running) do
+  vis.events.subscribe(vis.events.FILE_CLOSE,
+                       function(file) -- luacheck: ignore file
+    for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
       if ls.open_files[file.path] then
         lspc_close(ls, file)
       end
@@ -637,10 +638,11 @@ local function lspc_open(ls, win, file)
 
   -- the server is interested in didSave notifications
   if ls.capabilities.textDocumentSync.save then
-    vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
-      for _, ls in pairs(lspc.running) do
+    vis.events.subscribe(vis.events.FILE_SAVE_POST,
+                         function(file, path) -- luacheck: ignore file
+      for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
         if ls.open_files[file.path] then
-          local params = {textDocument = {uri = path_to_uri(path)}}
+          local params = {textDocument = {uri = path_to_uri(path)}} -- luacheck: ignore params
           ls_send_notification(ls, 'textDocument/didSave', params)
         end
       end
