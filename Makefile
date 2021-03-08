@@ -1,5 +1,8 @@
 .PHONY: check format check-luacheck check-format
 
+# bash's process substitution is used for check-format
+SHELL := /bin/bash
+
 check: check-luacheck check-format
 
 check-luacheck:
