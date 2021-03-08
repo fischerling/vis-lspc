@@ -29,10 +29,11 @@ jobs:
         run: |
           sudo apt-get -y install luarocks
           sudo luarocks install luacheck
-          sudo luarocks install --server=https://luarocks.org/dev luaformatter
+        # install lua-format when luarocks > 3 is in ubuntu
+        # sudo luarocks install --server=https://luarocks.org/dev luaformatter
 
-      - name: check format
-        run: make check-format
+      # - name: check format
+      #  run: make check-format
         
       - name: static analysis
         run: make check-luacheck
