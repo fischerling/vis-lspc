@@ -25,6 +25,12 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
+      - name: install dependencies
+        run: |
+          sudo apt-get -y install luarocks
+          sudo luarocks install luacheck
+          sudo luarocks install --server=https://luarocks.org/dev luaformatter
+
       - name: check format
         run: make check-format
         
