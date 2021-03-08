@@ -488,8 +488,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
 end
 
 -- method response dispatcher
-local function ls_handle_method_response(ls, method_response)
-  local req = assert(ls.inflight[method_response.id])
+local function ls_handle_method_response(ls, method_response, req)
   local win = req.win
 
   local method = req.method
@@ -529,13 +528,27 @@ local function ls_handle_method_response(ls, method_response)
   ls.inflight[method_response.id] = nil
 end
 
+local function ls_handle_method_call(ls, notification) -- luacheck: no unused args
+end
+
 local function ls_handle_notification(ls, notification) -- luacheck: no unused args
 end
 
--- dispatch between a method response and a notification from the server
+-- dispatch between a method call and a message response
+-- for a message response we have a req remembered in the inflight table
+local function ls_handle_method(ls, method)
+  local req = ls.inflight[method.id]
+  if req then
+    ls_handle_method_response(ls, method, req)
+  else
+    ls_handle_method_call(ls, method)
+  end
+end
+
+-- dispatch between a method call/response and a notification from the server
 local function ls_handle_msg(ls, response)
   if response.id then
-    ls_handle_method_response(ls, response)
+    ls_handle_method(ls, response)
   else
     ls_handle_notification(ls, response)
   end
