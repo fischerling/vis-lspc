@@ -33,9 +33,25 @@ else
 end
 
 -- get vis's pid to pass it to the language servers
-local vis_proc_file = assert(io.open('/proc/self/stat', 'r'))
-local vis_pid = vis_proc_file:read('*n')
-vis_proc_file:close()
+local vis_pid
+do
+  local vis_proc_file = io.open('/proc/self/stat', 'r')
+  if vis_proc_file then
+    vis_pid = vis_proc_file:read('*n')
+    vis_proc_file:close()
+
+  else -- fallback if /proc/self/stat
+    local p = io.popen('sh -c "echo $PPID"')
+    local out = p:read('*a')
+    local success, _, status = p:close()
+
+    if not success then
+      lspc_err('sh failed with exit code: ' .. status)
+    end
+    vis_pid = tonumber(out)
+  end
+end
+assert(vis_pid)
 
 -- forward declaration of our client table
 local lspc
