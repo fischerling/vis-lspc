@@ -951,6 +951,9 @@ vis.events.subscribe(vis.events.FILE_OPEN, function(file)
   end
 
   local ls = lspc_get_usable_ls(win.syntax)
+  if not ls then
+    return
+  end
 
   lspc_open(ls, win, file)
 end)
