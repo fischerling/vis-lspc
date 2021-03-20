@@ -32,6 +32,23 @@ else
   json = load_fallback_json()
 end
 
+local jsonrpc = {}
+jsonrpc.error_codes = {
+  -- json rpc errors
+  ParseError = -32700,
+  InvalidRequest = -32600,
+  MethodNotFound = -32601,
+  InvalidParams = -32602,
+  InternalError = -32603,
+
+  ServerNotInitialized = -32002,
+  UnknownErrorCode = -32001,
+
+  -- lsp errors
+  ContentModified = -32801,
+  RequestCancelled = -32800,
+}
+
 -- get vis's pid to pass it to the language servers
 local vis_pid
 do
@@ -528,7 +545,15 @@ local function ls_handle_method_response(ls, method_response, req)
   ls.inflight[method_response.id] = nil
 end
 
-local function ls_handle_method_call(ls, notification) -- luacheck: no unused args
+local function ls_handle_method_call(ls, method_call)
+  local method = method_call.method
+  lspc.log('Unknown method call ' .. method)
+  local response = {id = method_call.id}
+  response['error'] = {
+    code = jsonrpc.error_codes.MethodNotFound,
+    message = method .. ' not implemented',
+  }
+  ls_rpc(ls, response)
 end
 
 local function ls_handle_notification(ls, notification) -- luacheck: no unused args
