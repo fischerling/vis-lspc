@@ -114,6 +114,11 @@ lspc = {
   menu_cmd = 'vis-menu',
 }
 
+-- our capabilities we tell the language server when calling "initialize"
+local client_capabilites = {}
+client_capabilites.workspace = {}
+client_capabilites.workspace.configuration = false
+
 -- check if fzf is available and use fzf instead of vis-menu per default
 if os.execute('type fzf >/dev/null 2>/dev/null') then
   lspc.menu_cmd = 'fzf'
@@ -778,7 +783,7 @@ local function ls_start_server(syntax)
     processID = vis_pid,
     client = {name = lspc.name, version = lspc.version},
     rootUri = nil,
-    capabilities = {},
+    capabilities = client_capabilites,
   }
 
   ls_call_method(ls, 'initialize', params)
