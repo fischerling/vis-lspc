@@ -313,8 +313,9 @@ end
 local function lspc_select_location(locations)
   local choices = {}
   for _, location in ipairs(locations) do
-    local path = uri_to_path(location.uri)
-    local position = lsp_pos_to_vis(location.range.start)
+    local path = uri_to_path(location.uri or location.targetUri)
+    local range = location.range or location.targetSelectionRange
+    local position = lsp_pos_to_vis(range.start)
     local choice = path .. ':' .. position.line .. ':' .. position.col
     table.insert(choices, choice)
     choices[choice] = location
@@ -397,8 +398,8 @@ local function lspc_handle_goto_method_response(req, result, win)
   end
 
   local location
-  -- result is no plain Location -> it must be Location[]
-  if not result.uri then
+  -- result actually a list of results
+  if type(result) == 'table' then
     location = lspc_select_location(result, win)
     if not location then
       return
@@ -408,15 +409,33 @@ local function lspc_handle_goto_method_response(req, result, win)
   end
   assert(location)
 
-  local lsp_doc_pos = {
-    textDocument = {uri = location.uri},
-    position = {
-      line = location.range.start.line,
-      character = location.range.start.character,
-    },
-  }
+  -- location is a Location
+  local lsp_doc_pos
+  if location.uri then
+    lspc.log('Handle location: ' .. json.encode(location))
+    lsp_doc_pos = {
+      textDocument = {uri = location.uri},
+      position = {
+        line = location.range.start.line,
+        character = location.range.start.character,
+      },
+    }
+    -- location is a LocationLink
+  elseif location.targetUri then
+    lspc.log('Handle locationLink: ' .. json.encode(location))
+    lsp_doc_pos = {
+      textDocument = {uri = location.targetUri},
+      position = {
+        line = location.targetSelectionRange.start.line,
+        character = location.targetSelectionRange.start.character,
+      },
+    }
+  else
+    lspc_warn('Unknown location type: ' .. json.encode(location))
+  end
 
-  vis_open_new_doc_pos(lsp_doc_pos_to_vis(lsp_doc_pos), req.ctx)
+  local doc_pos = lsp_doc_pos_to_vis(lsp_doc_pos)
+  vis_open_new_doc_pos(doc_pos, req.ctx)
 end
 
 local function lspc_handle_completion_method_response(win, result, old_pos)
