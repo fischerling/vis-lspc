@@ -658,6 +658,10 @@ end
 
 -- check if a language server is running and initialized
 local function lspc_get_usable_ls(syntax)
+  if not syntax then
+    return nil, 'No syntax provided'
+  end
+
   local ls_name, err = get_ls_name_for_syntax(syntax)
   if err then
     return nil, err
