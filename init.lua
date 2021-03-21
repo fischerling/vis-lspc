@@ -468,7 +468,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     return
   end
 
-  if completion.insertText then
+  if completion.insertText or completion.label then
     -- Does our current state correspont to the state when the completion method
     -- was called.
     -- Otherwise we don't have a good way to apply the 'insertText' completion
@@ -476,7 +476,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
       lspc_warn('can not apply textInsert because the cursor position changed')
     end
 
-    local new_word = completion.insertText
+    local new_word = completion.insertText or completion.label
     local old_word_range = win.file:text_object_word(old_pos)
     local old_word = win.file:content(old_word_range)
 
