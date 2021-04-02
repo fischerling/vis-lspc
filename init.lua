@@ -112,6 +112,14 @@ lspc = {
   -- program used to let the user make choices
   -- The available choices are pass to <menu_cmd> on stdin separated by '\n'
   menu_cmd = 'vis-menu',
+
+  -- should diagnostics be highlighted if available
+  highlight_diagnostics = false,
+  -- style id used by lspc to register the style used to highlight diagnostics
+  diagnostic_style_id = 43,
+  -- style used by lspc to highlight the diagnostic range
+  -- 60% solarized red
+  diagnostic_style = 'back:#e3514f',
 }
 
 -- our capabilities we tell the language server when calling "initialize"
@@ -373,6 +381,16 @@ local function lspc_select_location(locations)
   return choices[choice]
 end
 
+local function lspc_highlight_diagnostics(win, diagnostics)
+  for _, diagnostic in ipairs(diagnostics) do
+    local range = diagnostic.vis_range
+    -- make sure to highlight only ranges which actually contain the diagnostic
+    if diagnostic.content == win.file:content(range) then
+      win:style(lspc.diagnostic_style_id, range.start, range.finish - 1)
+    end
+  end
+end
+
 -- send a rpc message to a language server
 local function ls_rpc(ls, req)
   req.jsonrpc = '2.0'
@@ -623,7 +641,33 @@ local function ls_handle_method_call(ls, method_call)
   ls_rpc(ls, response)
 end
 
+-- save the diagnostics received for a file uri
+local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
+  local file_path = uri_to_path(uri)
+  local file = ls.open_files[file_path]
+  if file and file_path == vis.win.file.path then
+    for _, diagnostic in ipairs(diagnostics) do
+      -- We convert the lsp_range to a vis_range here to do it only once.
+      -- And because we can't do it during a WIN_HIGHLIGHT events because
+      -- lsp_range_to_vis_range modifies the primary selection
+      diagnostic.vis_range = lsp_range_to_vis_range(vis.win, diagnostic.range)
+      -- Remember the content of the diagnostic to only highlight it if the content
+      -- did not change
+      diagnostic.content = vis.win.file:content(diagnostic.vis_range)
+    end
+
+    file.diagnostics = diagnostics
+
+    lspc.log('remember diagnostics for ' .. file_path)
+  end
+end
+
 local function ls_handle_notification(ls, notification) -- luacheck: no unused args
+  local method = notification.method
+  if method == 'textDocument/publishDiagnostics' then
+    lspc_handle_publish_diagnostics(ls, notification.params.uri,
+                                    notification.params.diagnostics)
+  end
 end
 
 -- dispatch between a method call and a message response
@@ -749,7 +793,7 @@ local function lspc_open(ls, win, file)
     },
   }
 
-  ls.open_files[file.path] = {file = file, version = 0}
+  ls.open_files[file.path] = {file = file, version = 0, diagnostics = {}}
   ls_send_notification(ls, 'textDocument/didOpen', params)
 
   vis.events.subscribe(vis.events.FILE_CLOSE,
@@ -892,6 +936,40 @@ local lspc_goto_location_methods = {
   end,
 }
 
+local function lspc_show_diagnostic(ls, win, line)
+  local open_file = ls.open_files[win.file.path]
+  if not open_file then
+    return win.file.path .. ' not open in ' .. ls.name
+  end
+
+  local diagnostics = open_file.diagnostics
+  if not diagnostics then
+    return win.file.path .. ' has no diagnostics available'
+  end
+
+  line = line or get_selection(win).line
+  lspc.log('Show diagnostics for ' .. line)
+  local diagnostics_to_show = {}
+  for _, diagnostic in ipairs(diagnostics) do
+    local start = lsp_pos_to_vis_sel(diagnostic.range.start)
+    if start.line == line then
+      diagnostic.start = start
+      table.insert(diagnostics_to_show, diagnostic)
+    end
+  end
+
+  local diagnostics_fmt = '%d:%d %s:%s\n'
+  local diagnostics_msg = ''
+  for _, diagnostic in ipairs(diagnostics_to_show) do
+    diagnostics_msg = diagnostics_msg ..
+                          string.format(diagnostics_fmt, diagnostic.start.line,
+                                        diagnostic.start.col, diagnostic.code,
+                                        diagnostic.message)
+  end
+
+  vis:message(diagnostics_msg)
+end
+
 -- vis-lspc commands
 
 vis:command_register('lspc-back', function()
@@ -978,11 +1056,52 @@ vis:command_register('lspc-open', function(_, _, win)
   lspc_open(ls, win, win.file)
 end)
 
+vis:command_register('lspc-show-diagnostics', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  err = lspc_show_diagnostic(ls, win, argv[1])
+  if err then
+    lspc_err(err)
+  end
+end)
+
+vis:command_register('lspc-open', function(_, _, win)
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  lspc_open(ls, win, win.file)
+end)
+
 -- vis-lspc event hooks
 
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
     ls_start_server(win.syntax)
+  end
+
+  assert(win:style_define(lspc.diagnostic_style_id, lspc.diagnostic_style))
+end)
+
+vis.events.subscribe(vis.events.WIN_HIGHLIGHT, function(win)
+  local ls = lspc_get_usable_ls(win.syntax)
+  if not ls then
+    return
+  end
+
+  if not win.file then
+    return
+  end
+
+  local open_file = ls.open_files[win.file.path]
+  if open_file and open_file.diagnostics and lspc.highlight_diagnostics then
+    lspc_highlight_diagnostics(win, open_file.diagnostics)
   end
 end)
 
@@ -1027,5 +1146,10 @@ vis:map(vis.modes.INSERT, '<C- >', function()
   vis:command('lspc-completion')
   vis.mode = vis.modes.INSERT
 end)
+
+vis:option_register('lspc-highlight-diagnostics', 'bool', function(value)
+  lspc.highlight_diagnostics = value
+  return true
+end, 'Should lspc highlight diagnostics if available')
 
 return lspc
