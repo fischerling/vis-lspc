@@ -153,10 +153,23 @@ end
 -- Document position code
 -- https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams
 
--- A document positions is defined by a file path and a (line, column) tuple
--- We use 1-based indices like vis and lua.
--- Note line and col numbers must be transformed into 0-based indices when communicating
--- with a language server
+-- We use the following position/location/file related types in  vis-lspc:
+-- pos - like in vis a 0-based byte offset into the file.
+-- path - posix path used by vis
+-- uri - file uri used by LSP
+
+-- lsp_position - 0-based tuple (line, character)
+-- lsp_document_position - aka. LSP TextDocumentPosition, tuple of (uri, lsp_position)
+
+-- vis_selection - 1-based tuple (line, cul) (character)
+--              Can be used with with Selection:to
+-- vis_document_position - 1-based tuple of (path, line, cul)
+
+-- vis_range - tuple of 0-based byte offsets (finish, start)
+-- lsp_range - aka. Range, tuple of two lsp_positions (start, end)
+
+-- There exist helper function to convert from one type into another
+-- aswell as helper to retrieve the current primary selection from a vis.window
 
 local function path_to_uri(path)
   return 'file://' .. path
@@ -178,27 +191,45 @@ local function uri_to_path(uri)
   return decode_uri(uri:gsub('file://', ''))
 end
 
--- convert LSP 0-based Position to vis position
-local function lsp_pos_to_vis(pos)
+-- get the vis_selection from current primary selection
+local function get_selection(win)
+  return {line = win.selection.line, col = win.selection.col}
+end
+
+-- get the 0-base byte offset from a selection
+-- ATTENTION: this function modifies the primary selection so it is not
+-- safe to call it for example during WIN_HIGHLIGHT events
+local function vis_sel_to_pos(win, selection)
+  local old_selection = get_selection(win)
+  -- move primary selection
+  win.selection:to(selection.line, selection.col)
+  local pos = win.selection.pos
+  -- restore old primary selection
+  win.selection:to(old_selection.line, old_selection.col)
+  return pos
+end
+
+-- convert lsp_position to vis_selection
+local function lsp_pos_to_vis_sel(pos)
   return {line = pos.line + 1, col = pos.character + 1}
 end
 
--- convert 1-based vis position to LSP Position
-local function vis_pos_to_lsp(pos)
+-- convert vis_selection to lsp_position
+local function vis_sel_to_lsp_pos(pos)
   return {line = pos.line - 1, character = pos.col - 1}
 end
 
--- convert our doc_pos to LSP TextDocumentPosition
+-- convert our vis_document_position to lsp_document_position aka. TextDocumentPosition
 local function vis_doc_pos_to_lsp(doc_pos)
   return {
     textDocument = {uri = path_to_uri(doc_pos.file)},
-    position = vis_pos_to_lsp({line = doc_pos.line, col = doc_pos.col}),
+    position = vis_sel_to_lsp_pos({line = doc_pos.line, col = doc_pos.col}),
   }
 end
 
--- convert LSP TextDocumentPosition to our doc_pos
+-- convert lsp_document_position to vis_document_position
 local function lsp_doc_pos_to_vis(doc_pos)
-  local pos = lsp_pos_to_vis(doc_pos.position)
+  local pos = lsp_pos_to_vis_sel(doc_pos.position)
   return {
     file = uri_to_path(doc_pos.textDocument.uri),
     line = pos.line,
@@ -208,12 +239,24 @@ end
 
 -- get document position of the main curser
 local function vis_get_doc_pos(win)
-  win = win or vis.win
   return {
     file = win.file.path,
     line = win.selection.line,
     col = win.selection.col,
   }
+end
+
+-- convert a lsp_range to a vis_range
+-- ATTENTION: this function modifies the primary selection so it is not
+-- safe to call it for example during WIN_HIGHLIGHT events
+local function lsp_range_to_vis_range(win, lsp_range)
+  local start = lsp_pos_to_vis_sel(lsp_range.start)
+  local start_pos = vis_sel_to_pos(win, start)
+
+  local finish = lsp_pos_to_vis_sel(lsp_range['end'])
+  local finish_pos = vis_sel_to_pos(win, finish)
+
+  return {start = start_pos, finish = finish_pos}
 end
 
 -- open a doc_pos using the vis command <cmd>
@@ -256,8 +299,8 @@ end
 local function vis_apply_textEdit(win, file, textEdit)
   assert(win.file == file)
 
-  local start_pos = lsp_pos_to_vis(textEdit.range.start)
-  local end_pos = lsp_pos_to_vis(textEdit.range['end'])
+  local start_pos = lsp_pos_to_vis_sel(textEdit.range.start)
+  local end_pos = lsp_pos_to_vis_sel(textEdit.range['end'])
 
   -- convert the LSP range into a vis range
   -- this destroys the current selection but we change it after the edit anyway
@@ -315,7 +358,7 @@ local function lspc_select_location(locations)
   for _, location in ipairs(locations) do
     local path = uri_to_path(location.uri or location.targetUri)
     local range = location.range or location.targetSelectionRange
-    local position = lsp_pos_to_vis(range.start)
+    local position = lsp_pos_to_vis_sel(range.start)
     local choice = path .. ':' .. position.line .. ':' .. position.col
     table.insert(choices, choice)
     choices[choice] = location
