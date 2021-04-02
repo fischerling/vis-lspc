@@ -280,7 +280,7 @@ end
 -- open a new doc_pos remembering the old if it is replaced
 local function vis_open_new_doc_pos(doc_pos, cmd)
   if cmd == 'e' then
-    vis_push_doc_pos(vis.win, doc_pos)
+    vis_push_doc_pos(vis.win)
   end
 
   vis_open_doc_pos(doc_pos, cmd)
@@ -434,7 +434,7 @@ local function ls_call_text_document_method(ls, method, params, win, ctx)
   ls_call_method(ls, 'textDocument/' .. method, params, win, ctx)
 end
 
-local function lspc_handle_goto_method_response(req, result, win)
+local function lspc_handle_goto_method_response(req, result)
   if not result or next(result) == nil then
     lspc_warn(req.method .. ' found no results')
     return
@@ -443,7 +443,7 @@ local function lspc_handle_goto_method_response(req, result, win)
   local location
   -- result actually a list of results
   if type(result) == 'table' then
-    location = lspc_select_location(result, win)
+    location = lspc_select_location(result)
     if not location then
       return
     end
@@ -584,7 +584,7 @@ local function ls_handle_method_response(ls, method_response, req)
      method == 'textDocument/implementation' or
      method == 'textDocument/references' then
     -- LuaFormatter on
-    lspc_handle_goto_method_response(req, result, win)
+    lspc_handle_goto_method_response(req, result)
 
   elseif method == 'initialize' then
     ls.initialized = true
@@ -982,7 +982,7 @@ end)
 
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
-    ls_start_server(win.syntax, true)
+    ls_start_server(win.syntax)
   end
 end)
 
