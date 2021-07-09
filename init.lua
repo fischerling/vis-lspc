@@ -967,7 +967,11 @@ local function lspc_show_diagnostic(ls, win, line)
                                         diagnostic.message)
   end
 
-  vis:message(diagnostics_msg)
+  if diagnostics_msg ~= '' then
+    vis:message(diagnostics_msg)
+  else
+    lspc_warn('No diagnostics available for line: ' .. line)
+  end
 end
 
 -- vis-lspc commands
