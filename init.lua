@@ -937,10 +937,11 @@ local lspc_goto_location_methods = {
 }
 
 local function lspc_show_diagnostic(ls, win, line)
-  local open_file = ls.open_files[win.file.path]
-  if not open_file then
-    return win.file.path .. ' not open in ' .. ls.name
+  if not ls.open_files[win.file.path] then
+    lspc_open(ls, win, win.file)
   end
+
+  local open_file = ls.open_files[win.file.path]
 
   local diagnostics = open_file.diagnostics
   if not diagnostics then
