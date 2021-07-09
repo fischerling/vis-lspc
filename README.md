@@ -28,7 +28,7 @@ We never send any client capabilities.
 
 Communicating with language-servers via other channels than stdin/stdout.
 
-Currently only clangd is available and somewhat tested.
+Currently only clangd and pyls are configured by default and somewhat tested.
 
 ## Requirements
 
