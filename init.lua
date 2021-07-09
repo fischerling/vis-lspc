@@ -730,8 +730,8 @@ local function ls_recv_data(ls, data)
   local leftover = ls.partial_response.len - ls.partial_response.exp_len
 
   if leftover > 0 then
-    local leftover_data = ls.partial_response.msg:sub(
-                              ls.partial_response.exp_len + 1)
+    local leftover_data = ls.partial_response.msg:sub(ls.partial_response
+                                                          .exp_len + 1)
     lspc.log('LSPC: parse leftover: "' .. leftover_data .. '"')
 
     ls.partial_response.exp_len = 0
