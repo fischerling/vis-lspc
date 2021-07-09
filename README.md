@@ -11,6 +11,7 @@ vis-lspc currently supports:
 * `textDocument/references`
 * `textDocument/typeDefinition`
 * `textDocument/implementation`
+* `[Diagnostics]`
 
 ## Whats not working
 
