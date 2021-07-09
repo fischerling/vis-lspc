@@ -737,10 +737,10 @@ local function ls_recv_data(ls, data)
     ls.partial_response.exp_len = 0
     ls.partial_response.len = 0
     ls_recv_data(ls, leftover_data)
+  else
+    ls.partial_response.exp_len = 0
+    ls.partial_response.len = 0
   end
-
-  ls.partial_response.exp_len = 0
-  ls.partial_response.len = 0
 end
 
 -- check if a language server is running and initialized
