@@ -204,7 +204,7 @@ local function get_selection(win)
   return {line = win.selection.line, col = win.selection.col}
 end
 
--- get the 0-base byte offset from a selection
+-- get the 0-based byte offset from a selection
 -- ATTENTION: this function modifies the primary selection so it is not
 -- safe to call it for example during WIN_HIGHLIGHT events
 local function vis_sel_to_pos(win, selection)
@@ -215,6 +215,19 @@ local function vis_sel_to_pos(win, selection)
   -- restore old primary selection
   win.selection:to(old_selection.line, old_selection.col)
   return pos
+end
+
+-- get the line and column from a 0-based byte offset
+-- ATTENTION: this function modifies the primary selection so it is not
+-- safe to call it for example during WIN_HIGHLIGHT events
+local function vis_pos_to_sel(win, pos)
+  local old_selection = get_selection(win)
+  -- move primary selection
+  win.selection.pos = pos
+  local sel = get_selection(win)
+  -- restore old primary selection
+  win.selection:to(old_selection.line, old_selection.col)
+  return sel
 end
 
 -- convert lsp_position to vis_selection
@@ -589,6 +602,22 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
   lspc_err('Unsupported completion')
 end
 
+local function lspc_handle_hover_method_response(win, result, old_pos)
+  if not result or not result.contents then
+    lspc_warn('no hover available')
+    return
+  end
+
+  -- extract the string value from a possible MarkupContent object
+  local sel = vis_pos_to_sel(win, old_pos)
+  local hover_header =
+      '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
+          sel.col .. ' ---'
+  local hover_msg = result.contents.value or result.contents
+  vis:message(hover_header .. '\n' .. hover_msg)
+
+end
+
 -- method response dispatcher
 local function ls_handle_method_response(ls, method_response, req)
   local win = req.win
@@ -611,6 +640,9 @@ local function ls_handle_method_response(ls, method_response, req)
 
   elseif method == 'textDocument/completion' then
     lspc_handle_completion_method_response(win, result, req.ctx)
+
+  elseif method == 'textDocument/hover' then
+    lspc_handle_hover_method_response(win, result, req.ctx)
 
   elseif method == 'shutdown' then
     ls_send_notification(ls, 'exit')
@@ -1004,6 +1036,20 @@ for name, func in pairs(lspc_goto_location_methods) do
   end)
 end
 
+vis:command_register('lspc-hover', function(_, _, win)
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  -- remember the position where hover was called
+  err = lspc_method_doc_pos(ls, 'hover', win, win.selection.pos)
+  if err then
+    lspc_err(err)
+  end
+end)
+
 vis:command_register('lspc-completion', function(_, _, win)
   local ls, err = lspc_get_usable_ls(win.syntax)
   if err then
@@ -1011,7 +1057,7 @@ vis:command_register('lspc-completion', function(_, _, win)
     return
   end
 
-  -- remember the position where completions where requested
+  -- remember the position where completions were requested
   -- to apply insertText completions
   err = lspc_method_doc_pos(ls, 'completion', win, win.selection.pos)
   if err then
@@ -1178,6 +1224,10 @@ end, 'lspc: jump to type definition')
 vis:map(vis.modes.NORMAL, ' e', function()
   vis:command('lspc-show-diagnostics')
 end, 'lspc: show diagnostic of current line')
+
+vis:map(vis.modes.NORMAL, 'K', function()
+  vis:command('lspc-hover')
+end, 'lspc: hover over current position')
 
 vis:option_register('lspc-highlight-diagnostics', 'bool', function(value)
   lspc.highlight_diagnostics = value
