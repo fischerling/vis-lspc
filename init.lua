@@ -112,6 +112,8 @@ lspc = {
   -- program used to let the user make choices
   -- The available choices are pass to <menu_cmd> on stdin separated by '\n'
   menu_cmd = 'vis-menu',
+  -- program used to ask the user for confirmation
+  confirm_cmd = 'vis-menu',
 
   -- should diagnostics be highlighted if available
   highlight_diagnostics = false,
@@ -394,6 +396,80 @@ local function lspc_select_location(locations)
   return choices[choice]
 end
 
+-- get a user confirmation
+-- return true if user selected yes, false otherwise
+local function lspc_confirm(prompt)
+  local choices = 'no\nyes'
+
+  local cmd = 'printf "' .. choices .. '" | ' .. lspc.confirm_cmd
+
+  if prompt then
+    cmd = cmd .. ' -p \'' .. prompt .. '\''
+  end
+
+  lspc.log('get confirmation using: ' .. cmd)
+  -- local menu = io.popen(cmd)
+  -- local output = menu:read('*a')
+  -- local _, _, status = menu:close()
+
+  local choice = nil
+  local status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+  if status == 0 then
+    -- trim newline from selection
+    if output:sub(-1) == '\n' then
+      choice = output:sub(1, -2)
+    else
+      choice = output
+    end
+  end
+
+  vis:redraw()
+  return choice == 'yes'
+end
+
+-- apply a WorkspaceEdit received from the language server
+local function vis_apply_workspaceEdit(win, file, workspaceEdit)
+  assert(win.file == file)
+
+  local file_edits = workspaceEdit.changes
+  assert(file_edits)
+
+  -- generate change summary
+  local summary = '--- workspace edit summary ---\n'
+  for uri, edits in pairs(file_edits) do
+    local path = uri_to_path(uri)
+    summary = summary .. path .. ':\n'
+    for i, edit in ipairs(edits) do
+      summary = summary .. '\t' .. i .. '.: ' .. json.encode(edit) .. '\n'
+    end
+  end
+
+  vis:message(summary)
+  vis:redraw()
+
+  -- get user confirmation
+  local confirmation = lspc_confirm('apply changes:')
+
+  -- close summary window
+  vis:command('q')
+
+  if not confirmation then
+    return
+  end
+
+  -- apply changes
+  for uri, edits in pairs(file_edits) do
+    local path = uri_to_path(uri)
+    if path == file.path then
+      for _, edit in ipairs(edits) do
+        vis_apply_textEdit(win, file, edit)
+      end
+    end
+
+    -- TODO: apply changes in different files
+  end
+end
+
 local function lspc_highlight_diagnostics(win, diagnostics)
   for _, diagnostic in ipairs(diagnostics) do
     local range = diagnostic.vis_range
@@ -615,7 +691,12 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
           sel.col .. ' ---'
   local hover_msg = result.contents.value or result.contents
   vis:message(hover_header .. '\n' .. hover_msg)
+end
 
+local function lspc_handle_rename_method_response(win, result)
+  -- result must always be valid because otherwise we would caught the error
+  -- in ls_handle_method_response
+  vis_apply_workspaceEdit(win, win.file, result)
 end
 
 -- method response dispatcher
@@ -623,7 +704,14 @@ local function ls_handle_method_response(ls, method_response, req)
   local win = req.win
 
   local method = req.method
+
+  local err = method_response.error
+  if err then
+    lspc_err(err .. ' occurred during ' .. method ' call')
+  end
+
   local result = method_response.result
+
   -- LuaFormatter off
   if method == 'textDocument/definition' or
      method == 'textDocument/declaration' or
@@ -643,6 +731,9 @@ local function ls_handle_method_response(ls, method_response, req)
 
   elseif method == 'textDocument/hover' then
     lspc_handle_hover_method_response(win, result, req.ctx)
+
+  elseif method == 'textDocument/rename' then
+    lspc_handle_rename_method_response(win, result, req.ctx)
 
   elseif method == 'shutdown' then
     ls_send_notification(ls, 'exit')
@@ -1048,6 +1139,35 @@ vis:command_register('lspc-hover', function(_, _, win)
   if err then
     lspc_err(err)
   end
+end)
+
+vis:command_register('lspc-rename', function(argv, _, win)
+  local new_name = argv[1]
+  if not new_name then
+    lspc_err('lspc-rename usage: <new name>')
+    return
+  end
+
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  -- check if the language server has a provider for this method
+  if not ls.capabilities['renameProvider'] then
+    lspc_err('language server ' .. ls.name .. ' does not provide rename')
+    return
+  end
+
+  if not ls.open_files[win.file.path] then
+    lspc_open(ls, win, win.file)
+  end
+
+  local params = vis_doc_pos_to_lsp(vis_get_doc_pos(win))
+  params.newName = new_name
+
+  ls_call_text_document_method(ls, 'rename', params, win)
 end)
 
 vis:command_register('lspc-completion', function(_, _, win)
