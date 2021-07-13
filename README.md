@@ -12,6 +12,7 @@ vis-lspc currently supports:
 * `textDocument/typeDefinition`
 * `textDocument/implementation`
 * `textDocument/hover`
+* `[textDocument/rename]`
 * `[Diagnostics]`
 
 ## Whats not working
@@ -54,8 +55,15 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 	Normal mode:
 	<F2> - start a language server for win.syntax
 	<F3> - open win.file with a running language server
-	<C-]> - jump to the definition of the symbol under the main cursor
+	<C-]> | <gd> - jump to the definition of the symbol under the main cursor
+	<gD> - jump to declaration
+	<gd> - jump to definition
+	<gi> - jump to implementation
+	<gr> - show references
+	< D> - jump to type definition
 	<C-t> - go back in the jump history
+	< e> - show diagnostics of current line
+	<K> - hover over current position
 	Normal and Insert mode:
 	<C- > - get completions
 
@@ -80,6 +88,13 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 
 	lspc-back - navigate back in the goto history
 
+	# workspace edits
+	lspc-rename <new name> - rename the identifier under the cursor to <new name>
+
+	# development support
+	lspc-hover - hover over the current line
+	lspc-show-diagnostics - show the available diagnostics of the current line
+
 ### Available configuration fields
 
 The module table returned by `require('plugins/vis-lspc')` can be use to configure
@@ -92,7 +107,10 @@ Available fields are:
 * `log_file = 'vis-lspc.log'` - file vis-lspc writes all log messages to
 * `autostart = true` - try to start a language server in WIN_OPEN
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
+* `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
 * `ls_map` - a table mapping vis syntax names to language server configurations
+* `highlight_diagnostics = false` - highlight available diagnostics
+* `diagnostic_style = 'back:#e3514f'` - style used to highlight diagnostics
 
 #### Configure your own Language Server
 
