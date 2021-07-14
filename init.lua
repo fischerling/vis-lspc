@@ -458,20 +458,32 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   -- apply changes to open files
   for uri, edits in pairs(file_edits) do
     local path = uri_to_path(uri)
-    -- local open = false
+
     -- search all open windows for this uri
+    local win_with_file
     for win in vis:windows() do
       if win.file and win.file.path == path then
-        -- open = true
-        for _, edit in ipairs(edits) do
-          vis_apply_textEdit(win, win.file, edit)
-        end
+        win_with_file = win
+        break
       end
     end
 
-    -- TODO: apply changes to not open files
-    -- if not open then
-    -- end
+    -- It is not open currently -> open it
+    local opened
+    if not win_with_file then
+      vis:command('o ' .. path)
+      win_with_file = vis.win
+      opened = true
+    end
+
+    for _, edit in ipairs(edits) do
+      vis_apply_textEdit(win_with_file, win_with_file.file, edit)
+    end
+
+    -- save changes and close the opened window
+    if opened then
+      vis:command('wq')
+    end
   end
 end
 

@@ -12,7 +12,7 @@ vis-lspc currently supports:
 * `textDocument/typeDefinition`
 * `textDocument/implementation`
 * `textDocument/hover`
-* `[textDocument/rename]`
+* `textDocument/rename`
 * `[Diagnostics]`
 
 ## Whats not working
