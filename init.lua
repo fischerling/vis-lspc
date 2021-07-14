@@ -428,9 +428,7 @@ local function lspc_confirm(prompt)
 end
 
 -- apply a WorkspaceEdit received from the language server
-local function vis_apply_workspaceEdit(win, file, workspaceEdit)
-  assert(win.file == file)
-
+local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   local file_edits = workspaceEdit.changes
   assert(file_edits)
 
@@ -457,16 +455,23 @@ local function vis_apply_workspaceEdit(win, file, workspaceEdit)
     return
   end
 
-  -- apply changes
+  -- apply changes to open files
   for uri, edits in pairs(file_edits) do
     local path = uri_to_path(uri)
-    if path == file.path then
-      for _, edit in ipairs(edits) do
-        vis_apply_textEdit(win, file, edit)
+    -- local open = false
+    -- search all open windows for this uri
+    for win in vis:windows() do
+      if win.file and win.file.path == path then
+        -- open = true
+        for _, edit in ipairs(edits) do
+          vis_apply_textEdit(win, win.file, edit)
+        end
       end
     end
 
-    -- TODO: apply changes in different files
+    -- TODO: apply changes to not open files
+    -- if not open then
+    -- end
   end
 end
 
