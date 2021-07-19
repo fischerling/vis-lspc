@@ -701,13 +701,38 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
     return
   end
 
-  -- extract the string value from a possible MarkupContent object
   local sel = vis_pos_to_sel(win, old_pos)
   local hover_header =
       '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
           sel.col .. ' ---'
+  -- extract the string value from a possible MarkupContent object
   local hover_msg = result.contents.value or result.contents
   vis:message(hover_header .. '\n' .. hover_msg)
+end
+
+local function lspc_handle_signature_help_method_response(win, result, call_pos)
+  if not result or not result.signatures or #result.signatures == 0 then
+    lspc_warn('no signature help available')
+    return
+  end
+
+  local signatures = result.signatures
+
+  local sel = vis_pos_to_sel(win, call_pos)
+  local help_header = '--- signature help: ' .. (win.file.path or '') .. ':' ..
+                          sel.line .. ', ' .. sel.col .. ' ---'
+
+  -- local help_msg = json.encode(result)
+  local help_msg = ''
+  for _, signature in ipairs(signatures) do
+    local sig_msg = signature.label
+    if signature.documentation then
+      sig_msg = sig_msg .. '\n\tdocumentation: ' ..
+                    signature.documentation.value
+    end
+    help_msg = help_msg .. '\n' .. sig_msg
+  end
+  vis:message(help_header .. help_msg)
 end
 
 local function lspc_handle_rename_method_response(win, result)
@@ -748,6 +773,9 @@ local function ls_handle_method_response(ls, method_response, req)
 
   elseif method == 'textDocument/hover' then
     lspc_handle_hover_method_response(win, result, req.ctx)
+
+  elseif method == 'textDocument/signatureHelp' then
+    lspc_handle_signature_help_method_response(win, result, req.ctx)
 
   elseif method == 'textDocument/rename' then
     lspc_handle_rename_method_response(win, result, req.ctx)
@@ -1158,6 +1186,20 @@ vis:command_register('lspc-hover', function(_, _, win)
   end
 end)
 
+vis:command_register('lspc-signature-help', function(_, _, win)
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  -- remember the position where signatureHelp was called
+  err = lspc_method_doc_pos(ls, 'signatureHelp', win, win.selection.pos)
+  if err then
+    lspc_err(err)
+  end
+end)
+
 vis:command_register('lspc-rename', function(argv, _, win)
   local new_name = argv[1]
   if not new_name then
@@ -1365,6 +1407,10 @@ end, 'lspc: show diagnostic of current line')
 vis:map(vis.modes.NORMAL, 'K', function()
   vis:command('lspc-hover')
 end, 'lspc: hover over current position')
+
+vis:map(vis.modes.NORMAL, '<C-k>', function()
+  vis:command('lspc-signature-help')
+end, 'lspc: signature help')
 
 vis:option_register('lspc-highlight-diagnostics', 'bool', function(value)
   lspc.highlight_diagnostics = value
