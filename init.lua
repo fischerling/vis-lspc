@@ -1,12 +1,20 @@
 -- Copyright (c) 2021 Florian Fischer. All rights reserved.
 -- Use of this source code is governed by a MIT license found in the LICENSE file.
 -- We require vis compiled with the communicate patch
+
+-- forward declaration of our client table
+local lspc
+
 local function lspc_warn(msg)
-  vis:info('LSPC Warning: ' .. msg)
+  local warning = 'LSPC Warning: ' .. msg
+  lspc.log(warning)
+  vis:info(warning)
 end
 
 local function lspc_err(msg)
-  vis:info('LSPC Error: ' .. msg)
+  local err = 'LSPC Error: ' .. msg
+  lspc.log(err)
+  vis:info(err)
 end
 
 if not vis.communicate then
@@ -69,9 +77,6 @@ do
   end
 end
 assert(vis_pid)
-
--- forward declaration of our client table
-local lspc
 
 -- logging system
 -- if lspc.logging is set to true the first call to lspc.log
