@@ -1,6 +1,10 @@
 -- Copyright (c) 2021 Florian Fischer. All rights reserved.
 -- Use of this source code is governed by a MIT license found in the LICENSE file.
 -- We require vis compiled with the communicate patch
+local source_str = debug.getinfo(1, 'S').source:sub(2)
+local source_path = source_str:match('(.*/)')
+
+local parser = dofile(source_path .. 'parser.lua')
 
 -- forward declaration of our client table
 local lspc
@@ -23,10 +27,7 @@ if not vis.communicate then
 end
 
 local function load_fallback_json()
-  local source_str = debug.getinfo(1, 'S').source:sub(2)
-  local script_path = source_str:match('(.*/)')
-
-  return dofile(script_path .. 'json.lua')
+  return dofile(source_path .. 'json.lua')
 end
 
 -- find a suitable json implementation
@@ -868,51 +869,20 @@ end
 -- In the worst case a data chunk contains two partial messages on at the beginning
 -- and one at the end
 local function ls_recv_data(ls, data)
-  -- new message received
-  if ls.partial_response.len == 0 then
-    lspc.log('LSPC: parse new message')
-    local header = data:match('^Content%-Length: %d+')
-    if not header then
-      lspc_err('received unexpected message: ' .. data)
-      return
-    end
-    ls.partial_response.exp_len = tonumber(header:match('%d+'))
-    local _, content_start = data:find('\r\n\r\n')
-
-    ls.partial_response.msg = data:sub(content_start + 1)
-    ls.partial_response.len = string.len(ls.partial_response.msg)
-
-  else -- try to complete partial received message
-    lspc.log('LSPC: parse message continuation')
-    ls.partial_response.msg = ls.partial_response.msg .. data
-    ls.partial_response.len = ls.partial_response.len + string.len(data)
-  end
-
-  -- received message not complete yet
-  if ls.partial_response.len < ls.partial_response.exp_len then
+  local err = ls.parser:add(data)
+  if err then
+    lspc_err(err)
     return
   end
 
-  local complete_msg = ls.partial_response.msg:sub(1,
-                                                   ls.partial_response.exp_len)
+  local msgs = ls.parser:get_msgs()
+  if not msgs then
+    return
+  end
 
-  lspc.log('LSPC: handling complete message: ' .. complete_msg)
-  local resp = json.decode(complete_msg)
-  ls_handle_msg(ls, resp)
-
-  local leftover = ls.partial_response.len - ls.partial_response.exp_len
-
-  if leftover > 0 then
-    local leftover_data = ls.partial_response.msg:sub(ls.partial_response
-                                                          .exp_len + 1)
-    lspc.log('LSPC: parse leftover: "' .. leftover_data .. '"')
-
-    ls.partial_response.exp_len = 0
-    ls.partial_response.len = 0
-    ls_recv_data(ls, leftover_data)
-  else
-    ls.partial_response.exp_len = 0
-    ls.partial_response.len = 0
+  for _, msg in ipairs(msgs) do
+    local resp = json.decode(msg)
+    ls_handle_msg(ls, resp)
   end
 end
 
@@ -1030,7 +1000,7 @@ local function ls_start_server(syntax)
     id = 0,
     inflight = {},
     open_files = {},
-    partial_response = {exp_len = 0, len = 0, response = nil},
+    parser = parser.Parser(),
   }
 
   ls.fd = vis:communicate(ls_conf.name, ls_conf.cmd)
@@ -1360,7 +1330,5 @@ vis:option_register('lspc-highlight-diagnostics', 'bool', function(value)
   return true
 end, 'Should lspc highlight diagnostics if available')
 
-local source_str = debug.getinfo(1, 'S').source:sub(2)
-local script_path = source_str:match('(.*/)')
-dofile(script_path .. 'bindings.lua')
+dofile(source_path .. 'bindings.lua')
 return lspc
