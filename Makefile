@@ -2,6 +2,8 @@
 
 LUA_FILES := $(shell find -name "*.lua" -not -path "./json.lua")
 
+TEST_FILES := $(shell find -name "*_test.lua")
+
 # bash's process substitution is used for check-format
 SHELL := /bin/bash
 
@@ -15,3 +17,6 @@ check-format:
 
 format:
 	lua-format -i $(LUA_FILES)
+
+test:
+	for tf in $(TEST_FILES); do $$tf; done
