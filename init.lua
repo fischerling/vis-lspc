@@ -108,7 +108,7 @@ lspc = {
   -- mapping language server names to their state tables
   running = {},
   name = 'vis-lspc',
-  version = '0.1.0',
+  version = '0.1.3',
   -- write log messages to lspc.log_file
   logging = false,
   log_file = 'vis-lspc.log',
