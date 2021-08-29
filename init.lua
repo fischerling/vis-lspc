@@ -6,23 +6,8 @@ local source_path = source_str:match('(.*/)')
 
 local parser = dofile(source_path .. 'parser.lua')
 
--- forward declaration of our client table
-local lspc
-
-local function lspc_warn(msg)
-  local warning = 'LSPC Warning: ' .. msg
-  lspc.log(warning)
-  vis:info(warning)
-end
-
-local function lspc_err(msg)
-  local err = 'LSPC Error: ' .. msg
-  lspc.log(err)
-  vis:info(err)
-end
-
 if not vis.communicate then
-  lspc_err('language server support requires vis communicate patch')
+  vis:info('LSPC Error: language server support requires vis communicate patch')
   return {}
 end
 
@@ -58,26 +43,31 @@ jsonrpc.error_codes = {
   RequestCancelled = -32800,
 }
 
--- get vis's pid to pass it to the language servers
-local vis_pid
-do
-  local vis_proc_file = io.open('/proc/self/stat', 'r')
-  if vis_proc_file then
-    vis_pid = vis_proc_file:read('*n')
-    vis_proc_file:close()
+-- state of our language server client
+local lspc = {
+  -- mapping language server names to their state tables
+  running = {},
+  name = 'vis-lspc',
+  version = '0.1.3',
+  -- write log messages to lspc.log_file
+  logging = false,
+  log_file = 'vis-lspc.log',
+  -- automatically start a language server when a new window is opened
+  autostart = true,
+  -- program used to let the user make choices
+  -- The available choices are pass to <menu_cmd> on stdin separated by '\n'
+  menu_cmd = 'vis-menu',
+  -- program used to ask the user for confirmation
+  confirm_cmd = 'vis-menu',
 
-  else -- fallback if /proc/self/stat
-    local p = io.popen('sh -c "echo $PPID"')
-    local out = p:read('*a')
-    local success, _, status = p:close()
-
-    if not success then
-      lspc_err('sh failed with exit code: ' .. status)
-    end
-    vis_pid = tonumber(out)
-  end
-end
-assert(vis_pid)
+  -- should diagnostics be highlighted if available
+  highlight_diagnostics = false,
+  -- style id used by lspc to register the style used to highlight diagnostics
+  diagnostic_style_id = 43,
+  -- style used by lspc to highlight the diagnostic range
+  -- 60% solarized red
+  diagnostic_style = 'back:#e3514f',
+}
 
 -- logging system
 -- if lspc.logging is set to true the first call to lspc.log
@@ -102,33 +92,40 @@ do
     log(msg)
   end
 end
+lspc.log = init_logging
 
--- state of our language server client
-lspc = {
-  -- mapping language server names to their state tables
-  running = {},
-  name = 'vis-lspc',
-  version = '0.1.3',
-  -- write log messages to lspc.log_file
-  logging = false,
-  log_file = 'vis-lspc.log',
-  log = init_logging,
-  -- automatically start a language server when a new window is opened
-  autostart = true,
-  -- program used to let the user make choices
-  -- The available choices are pass to <menu_cmd> on stdin separated by '\n'
-  menu_cmd = 'vis-menu',
-  -- program used to ask the user for confirmation
-  confirm_cmd = 'vis-menu',
+local function lspc_warn(msg)
+  local warning = 'LSPC Warning: ' .. msg
+  lspc.log(warning)
+  vis:info(warning)
+end
 
-  -- should diagnostics be highlighted if available
-  highlight_diagnostics = false,
-  -- style id used by lspc to register the style used to highlight diagnostics
-  diagnostic_style_id = 43,
-  -- style used by lspc to highlight the diagnostic range
-  -- 60% solarized red
-  diagnostic_style = 'back:#e3514f',
-}
+local function lspc_err(msg)
+  local err = 'LSPC Error: ' .. msg
+  lspc.log(err)
+  vis:info(err)
+end
+
+-- get vis's pid to pass it to the language servers
+local vis_pid
+do
+  local vis_proc_file = io.open('/proc/self/stat', 'r')
+  if vis_proc_file then
+    vis_pid = vis_proc_file:read('*n')
+    vis_proc_file:close()
+
+  else -- fallback if /proc/self/stat
+    local p = io.popen('sh -c "echo $PPID"')
+    local out = p:read('*a')
+    local success, _, status = p:close()
+
+    if not success then
+      lspc_err('sh failed with exit code: ' .. status)
+    end
+    vis_pid = tonumber(out)
+  end
+end
+assert(vis_pid)
 
 -- our capabilities we tell the language server when calling "initialize"
 local client_capabilites = {}

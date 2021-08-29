@@ -1,11 +1,9 @@
 -- Copyright (c) 2021 Florian Fischer. All rights reserved.
 -- Use of this source code is governed by a MIT license found in the LICENSE file.
-
 -- Parse the data send by a language server
 -- Note the chunks received may not end with the end of a message.
 -- In the worst case a data chunk contains two partial messages on at the beginning
 -- and one at the end
-
 local function add(p, data)
   p.data = p.data .. data
 
