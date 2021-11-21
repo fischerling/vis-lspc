@@ -752,7 +752,9 @@ local function ls_handle_method_response(ls, method_response, req)
 
   local err = method_response.error
   if err then
-    lspc_err(err .. ' occurred during ' .. method ' call')
+    local err_msg = err.message
+    local err_code = err.code
+    lspc_err(err_msg .. ' (' .. err_code .. ') occurred during ' .. method .. ' call')
   end
 
   local result = method_response.result
