@@ -56,6 +56,6 @@ vis:map(vis.modes.NORMAL, 'K', function()
   vis:command('lspc-hover')
 end, 'lspc: hover over current position')
 
-vis:map(vis.modes.NORMAL, '<C-k>', function()
+vis:map(vis.modes.NORMAL, '<C-K>', function()
   vis:command('lspc-signature-help')
 end, 'lspc: signature help')
