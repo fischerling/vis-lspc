@@ -730,8 +730,8 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
   for _, signature in ipairs(signatures) do
     local sig_msg = signature.label
     if signature.documentation then
-      sig_msg = sig_msg .. '\n\tdocumentation: ' ..
-                    signature.documentation.value
+      doc = signature.documentation.value or signature.documentation
+      sig_msg = sig_msg .. '\n\tdocumentation: ' .. doc
     end
     help_msg = help_msg .. '\n' .. sig_msg
   end
