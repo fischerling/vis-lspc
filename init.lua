@@ -1331,5 +1331,15 @@ vis:option_register('lspc-highlight-diagnostics', 'bool', function(value)
   return true
 end, 'Should lspc highlight diagnostics if available')
 
+vis:option_register('lspc-menu-cmd', 'string', function(value)
+  lspc.menu_cmd = value
+  return true
+end, 'External tool vis-lspc uses to present choices in a menu')
+
+vis:option_register('lspc-confirm-cmd', 'string', function(value)
+  lspc.confirm_cmd = value
+  return true
+end, 'External tool vis-lspc uses to ask the user for confirmation')
+
 dofile(source_path .. 'bindings.lua')
 return lspc
