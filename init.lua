@@ -156,13 +156,7 @@ do
     vis_proc_file:close()
 
   else -- fallback if /proc/self/stat
-    local p = io.popen('sh -c "echo $PPID"')
-    local out = p:read('*a')
-    local success, _, status = p:close()
-
-    if not success then
-      lspc_err('sh failed with exit code: ' .. status)
-    end
+    local out = capture_cmd('sh -c "echo $PPID"')
     vis_pid = tonumber(out)
   end
 end
