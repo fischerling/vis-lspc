@@ -51,7 +51,7 @@ local lspc = {
   version = '0.1.3',
   -- write log messages to lspc.log_file
   logging = false,
-  log_file = 'vis-lspc.log',
+  log_file = nil,
   -- automatically start a language server when a new window is opened
   autostart = true,
   -- program used to let the user make choices
@@ -68,6 +68,25 @@ local lspc = {
   -- 60% solarized red
   diagnostic_style = 'back:#e3514f',
 }
+
+-- Forward declaration of lspc_err to use it in capture_cmd
+local lspc_err
+
+-- Helper to execute a command and capture its output
+local function capture_cmd(cmd)
+  local p = assert(io.popen(cmd, 'r'))
+  local s = assert(p:read('*a'))
+  local success, _, status = p:close()
+  if not success then
+    local err = cmd .. ' failed with exit code: ' .. status
+    if lspc_err then
+      lspc_err(err)
+    else
+      vis:info('LSPC Error: ' .. err)
+    end
+  end
+  return s
+end
 
 -- logging system
 -- if lspc.logging is set to true the first call to lspc.log
@@ -86,7 +105,29 @@ do
       return
     end
 
-    log_fd = assert(io.open(lspc.log_file, 'w'))
+    local log_file = lspc.log_file
+
+    -- open the default log file in $XDG_DATA_HOME/vis-lspc
+    if not log_file then
+      local xdg_data = os.getenv('XDG_DATA_HOME') or os.getenv('HOME') ..
+                           '/.local/share'
+      local log_dir = xdg_data .. '/vis-lspc'
+
+      -- ensure the direcoty exists
+      os.execute('mkdir -p ' .. log_dir)
+
+      -- log file format: {time-stamp}-{basename-cwd}.log
+      local log_file_fmt = log_dir .. '/%s-%s.log'
+      local timestamp = os.date('%Y-%m-%dT%H:%M:%S')
+      local cwd = capture_cmd('pwd')
+      local basename_cwd = capture_cmd('basename ' .. cwd):match('^%s*(.-)%s*$')
+      log_file = log_file_fmt:format(timestamp, basename_cwd)
+
+    elseif type(log_file) == 'function' then
+      log_file = log_file()
+    end
+
+    log_fd = assert(io.open(log_file, 'w'))
     lspc.log = log
 
     log(msg)
@@ -100,7 +141,7 @@ local function lspc_warn(msg)
   vis:info(warning)
 end
 
-local function lspc_err(msg)
+lspc_err = function(msg)
   local err = 'LSPC Error: ' .. msg
   lspc.log(err)
   vis:info(err)

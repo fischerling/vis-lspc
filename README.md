@@ -104,7 +104,8 @@ Available fields are:
 
 * `name = 'vis-lspc'` - the name vis-lspc introduces itself to a language server
 * `logging = false` - enable logging only useful for debugging vis-lspc
-* `log_file = 'vis-lspc.log'` - file vis-lspc writes all log messages to
+* `log_file = nil` - nil, filename or function returning a filename
+  * If `log_file` is `nil` vis-lspc will create a new file in `$XDG_DATA_HOME/vis-lspc`
 * `autostart = true` - try to start a language server in WIN_OPEN
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
 * `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
