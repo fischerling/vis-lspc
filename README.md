@@ -46,6 +46,22 @@ Currently only clangd and pyls are configured by default and somewhat tested.
 1. Clone this repository into your vis plugins directory
 2. Load the plugin in your `visrc.lua` with `require('plugins/vis-lspc')`
 
+## Easy vis-lspc installation with GuixRUs
+
+The [GuixRUs](https://git.sr.ht/~whereiseveryone/guixrus) channel provides a fork of `vis` with the [communicate](https://github.com/martanne/vis/pull/675) API patches applied. Additionally, `vis-lspc` is bundled for convenience.
+
+After [adding GuixRUs](https://git.sr.ht/~whereiseveryone/guixrus#permanent) to your [channels.scm](https://guix.gnu.org/manual/en/html_node/Using-a-Custom-Guix-Channel.html), run the following command to build and install `vis-lsp`:
+
+`guix install vis-lsp`
+
+Alternatively, you can clone GuixRUs and install from a local git checkout:
+
+`git clone https://git.sr.ht/~whereiseveryone/guixrus`
+
+`cd guixrus`
+
+`guix install -L . vis-lsp`
+
 ## Usage
 
 vis-lspc is in a early state, but if you are brave there are some default key bindings:
