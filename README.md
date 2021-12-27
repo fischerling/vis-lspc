@@ -40,6 +40,7 @@ Currently only clangd and pyls are configured by default and somewhat tested.
 * Optional: the json implementation of your choice
 	* must be usable by calling `require('json')`
 	* must provide `json.encode, json.decode`
+	* vis-lspc tries to find a suitable json implementation using those candidates: json, cjson, dkjson
 
 ## Installation
 

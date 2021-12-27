@@ -11,19 +11,27 @@ if not vis.communicate then
   return {}
 end
 
-local function load_fallback_json()
-  return dofile(source_path .. 'json.lua')
-end
+local json
+local json_impls = {'json', 'cjson', 'dkjson'}
 
 -- find a suitable json implementation
-local json
-if vis:module_exist('json') then
-  json = require('json')
-  if not json.encode or not json.decode then
-    json = load_fallback_json()
+for _, json_impl in ipairs(json_impls) do
+  if vis:module_exist(json_impl) then
+    json = require(json_impl)
+    if not json.encode or not json.decode then
+      json = nil
+    end
+
+    -- found a usable json implementation
+    if json then
+      break
+    end
   end
-else
-  json = load_fallback_json()
+end
+
+-- We found no suitable implementation in json_impls -> use our fallback
+if not json then
+  json = dofile(source_path .. 'json.lua')
 end
 
 local jsonrpc = {}
