@@ -183,8 +183,9 @@ end
 -- clangd language server configuration
 local clangd = {name = 'clangd', cmd = 'clangd'}
 
--- pyls (python-language-server) language server configuration
-local pyls = {name = 'pyls', cmd = 'pyls'}
+-- pylsp (python-lsp-server) language server configuration
+-- https://github.com/python-lsp/python-lsp-server
+local pyls = {name = 'python-lsp-sever', cmd = 'pyls'}
 
 -- map of known language servers per syntax
 lspc.ls_map = {cpp = clangd, ansi_c = clangd, python = pyls}
