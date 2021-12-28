@@ -5,3 +5,7 @@ root = true
 [*.lua]
 indent_style = space
 indent_size = 2
+
+[.gitlab-ci.yml]
+indent_style = space
+indent_size = 2
