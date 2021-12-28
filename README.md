@@ -31,7 +31,7 @@ We never send any client capabilities.
 
 Communicating with language-servers via other channels than stdin/stdout.
 
-Currently only clangd and pyls are configured by default and somewhat tested.
+Currently only clangd, pylsp and lua-language-server are configured by default and somewhat tested.
 
 ## Requirements
 
