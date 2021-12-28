@@ -195,8 +195,12 @@ local clangd = {name = 'clangd', cmd = 'clangd'}
 -- https://github.com/python-lsp/python-lsp-server
 local pyls = {name = 'python-lsp-sever', cmd = 'pylsp'}
 
+-- lua (lua-language-server) language server configuration
+-- https://github.com/sumneko/lua-language-server
+local luals = {name = 'lua-language-server', cmd = 'lua-language-server'}
+
 -- map of known language servers per syntax
-lspc.ls_map = {cpp = clangd, ansi_c = clangd, python = pyls}
+lspc.ls_map = {cpp = clangd, ansi_c = clangd, python = pyls, lua = luals}
 
 -- return the name of the language server for this syntax
 local function get_ls_name_for_syntax(syntax)
