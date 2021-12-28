@@ -1,0 +1,23 @@
+image: imolein/luarocks:5.4
+
+stages:
+  - check
+  - test
+
+check-luacheck:
+  stage: check
+  script:
+    - luarocks install luacheck
+    - make check-luacheck
+
+# check-format:
+  # stage: check
+  # script:
+    # - luarocks install --server=https://luarocks.org/dev luaformatter
+    # - make check-format
+
+test:
+  stage: test
+  script:
+    - luarocks install lunatest
+    - make test
