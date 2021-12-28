@@ -1,0 +1,8 @@
+#!/bin/sh
+
+LUA_FILE=$1
+lua-format "${LUA_FILE}" > "${LUA_FILE}.fmt"
+diff "${LUA_FILE}" "${LUA_FILE}.fmt"
+RET=$?
+rm "${LUA_FILE}.fmt"
+exit ${RET}
