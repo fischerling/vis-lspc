@@ -1179,7 +1179,7 @@ end)
 
 for name, func in pairs(lspc_goto_location_methods) do
   vis:command_register('lspc-' .. name, function(argv, _, win)
-    local ls, err = lspc_get_usable_ls(win.syntax)
+    local ls, err = lspc_get_usable_ls(win.lsp_syntax)
     if err then
       lspc_err(err)
       return
@@ -1198,7 +1198,7 @@ for name, func in pairs(lspc_goto_location_methods) do
 end
 
 vis:command_register('lspc-hover', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1212,7 +1212,7 @@ vis:command_register('lspc-hover', function(_, _, win)
 end)
 
 vis:command_register('lspc-signature-help', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1232,7 +1232,7 @@ vis:command_register('lspc-rename', function(argv, _, win)
     return
   end
 
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1255,7 +1255,7 @@ vis:command_register('lspc-rename', function(argv, _, win)
 end)
 
 vis:command_register('lspc-completion', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1279,10 +1279,12 @@ vis:command_register('lspc-start-server', function(argv, _, win)
   if err then
     lspc_err(err)
   end
+
+  win.lsp_syntax = syntax
 end)
 
 vis:command_register('lspc-shutdown-server', function(argv, _, win)
-  local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
+  local ls, err = lspc_get_usable_ls(argv[1] or win.lsp_syntax)
   if err then
     lspc_err('no language server running: ' .. err)
     return
@@ -1292,7 +1294,7 @@ vis:command_register('lspc-shutdown-server', function(argv, _, win)
 end)
 
 vis:command_register('lspc-close', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1302,7 +1304,7 @@ vis:command_register('lspc-close', function(_, _, win)
 end)
 
 vis:command_register('lspc-open', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1312,7 +1314,7 @@ vis:command_register('lspc-open', function(_, _, win)
 end)
 
 vis:command_register('lspc-show-diagnostics', function(argv, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1325,7 +1327,7 @@ vis:command_register('lspc-show-diagnostics', function(argv, _, win)
 end)
 
 vis:command_register('lspc-open', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win.lsp_syntax)
   if err then
     lspc_err(err)
     return
@@ -1339,6 +1341,7 @@ end)
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
     ls_start_server(win.syntax)
+    win.lsp_syntax = win.syntax
   end
 
   assert(win:style_define(lspc.diagnostic_style_id, lspc.diagnostic_style))
