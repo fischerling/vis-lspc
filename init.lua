@@ -170,10 +170,45 @@ do
 end
 assert(vis_pid)
 
--- our capabilities we tell the language server when calling "initialize"
-local client_capabilites = {}
-client_capabilites.workspace = {}
-client_capabilites.workspace.configuration = false
+--
+--- ClientCapabilities we tell the language server when calling "initialize"
+--
+local supported_markup_kind = {'plaintext'}
+
+local goto_methods_capabilities = {
+  linkSupport = true,
+  dynamicRegistration = false,
+}
+
+local client_capabilites = {
+  workspace = {configuration = false},
+  textDocument = {
+    synchronization = {dynamicRegistration = false, didSave = true},
+    -- ask the server to send us only plaintext completionItems
+    completion = {
+      dynamicRegistration = false,
+      completionItem = {documentationFormat = supported_markup_kind},
+    },
+    -- ask the server to send us only plaintext hover results
+    hover = {dynamicRegistration = false, contentFormat = supported_markup_kind},
+    -- ask the server to send us only plaintext signatureHelp results
+    signatureHelp = {
+      dynamicRegistration = false,
+      signatureInformation = {documentationFormat = supported_markup_kind},
+    },
+    declaration = {dynamicRegistration = false, linkSupport = true},
+    definition = goto_methods_capabilities,
+    typeDefinition = goto_methods_capabilities,
+    implementation = goto_methods_capabilities,
+    references = {dynamicRegistration = false},
+    rename = {
+      dynamicRegistration = false,
+      prepareSupport = false,
+      honorsChangeAnnotations = false,
+    },
+  },
+  window = {workDoneProgress = false, showDocument = {support = false}},
+}
 
 -- check if fzf is available and use fzf instead of vis-menu per default
 if os.execute('type fzf >/dev/null 2>/dev/null') then

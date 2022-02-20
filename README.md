@@ -27,8 +27,6 @@ A dirty workaround we currently use is to send the whole file content in a `text
 method call before calling any other method.
 If someone can come up with an idea how to solve this I would appreciate contributions.
 
-We never send any client capabilities.
-
 Communicating with language-servers via other channels than stdin/stdout.
 
 Currently only clangd, pylsp and lua-language-server are configured by default and somewhat tested.
