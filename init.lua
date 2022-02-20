@@ -757,8 +757,22 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
   local hover_header =
       '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
           sel.col .. ' ---'
-  -- extract the string value from a possible MarkupContent object
-  local hover_msg = result.contents.value or result.contents
+
+  local hover_msg = ''
+  -- result is MarkedString[]
+  if type(result.contents) == 'table' then
+    lspc.log('hover returned list of length ' .. #result.contents)
+    for i, v in ipairs(result.contents) do
+      if i == 1 then
+        hover_msg = v.value or v
+      else
+        hover_msg = hover_msg .. '\n---\n' .. (v.value or v)
+      end
+    end
+    -- result is either MarkedString or MarkupContent
+  else
+    hover_msg = result.contents.value or result.contents
+  end
   vis:message(hover_header .. '\n' .. hover_msg)
 end
 
