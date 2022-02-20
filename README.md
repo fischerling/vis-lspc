@@ -38,9 +38,12 @@ Currently only clangd, pylsp and lua-language-server are configured by default a
 * vis must be compiled with the Lua [communicate API](https://github.com/martanne/vis/pull/675).
 * The language server you want to use. [Microsoft's list of implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/)
 * Optional: the json implementation of your choice
-	* must be usable by calling `require('json')`
-	* must provide `json.encode, json.decode`
-	* vis-lspc tries to find a suitable json implementation using those candidates: json, cjson, dkjson
+	* must provide `encode` and `decode` methods
+	* vis-lspc tries to find a suitable json implementation using those candidates:
+		* json
+		* cjson
+		* dkjson
+		* bundled fallback (no utf8 support)
 
 ## Installation
 
