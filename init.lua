@@ -574,6 +574,19 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   end
 end
 
+-- Detect a MarkedString
+-- https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#markedString
+local function lsp_is_marked_string(s)
+  return type(s) == 'string' or (type(s) == 'table' and s.language and s.value)
+end
+
+-- Detect MarkupContent
+-- https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#markupContent
+local function lsp_is_markup_content(s)
+  return type(s) == 'table' and s.kind and
+             (s.kind == 'markdown' or s.kind == 'plaintext') and s.value
+end
+
 local function lspc_highlight_diagnostics(win, diagnostics)
   for _, diagnostic in ipairs(diagnostics) do
     local range = diagnostic.vis_range
