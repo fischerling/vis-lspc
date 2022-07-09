@@ -232,7 +232,7 @@ lspc.ls_map = {
   ansi_c = clangd,
   -- pylsp (python-lsp-server) language server configuration
   -- https://github.com/python-lsp/python-lsp-server
-  python = {name = 'python-lsp-sever', cmd = 'pylsp'},
+  python = {name = 'python-lsp-server', cmd = 'pylsp'},
   -- lua (lua-language-server) language server configuration
   -- https://github.com/sumneko/lua-language-server
   lua = {name = 'lua-language-server', cmd = 'lua-language-server'},
