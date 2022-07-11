@@ -1,4 +1,4 @@
-image: imolein/luarocks:5.4
+image: muhq/lua-dev:0.1
 
 stages:
   - check
@@ -7,17 +7,14 @@ stages:
 check-luacheck:
   stage: check
   script:
-    - luarocks install luacheck
     - make check-luacheck
 
-# check-format:
-  # stage: check
-  # script:
-    # - luarocks install --server=https://luarocks.org/dev luaformatter
-    # - make check-format
+check-format:
+  stage: check
+  script:
+    - make check-format
 
 test:
   stage: test
   script:
-    - luarocks install lunatest
     - make test
