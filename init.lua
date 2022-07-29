@@ -75,6 +75,10 @@ local lspc = {
   -- style used by lspc to highlight the diagnostic range
   -- 60% solarized red
   diagnostic_style = 'back:#e3514f',
+
+  -- message level to show in the UI when eceiving messages from the server
+  -- Error = 1, Warning = 2, Info = 3, Log = 4
+  message_level = 3,
 }
 
 -- Forward declaration of lspc_err to use it in capture_cmd
@@ -935,11 +939,25 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
   end
 end
 
+local lsp_message_types = {'Error', 'Warning', 'Info', 'Log'}
+-- show a message from the server in the UI
+local function lspc_handle_show_message(show_message_params)
+  if show_message_params.type > lspc.message_level then
+    return
+  end
+
+  vis:message('--- language server message ---')
+  local level = lsp_message_types[show_message_params.type] or 'Unknown'
+  vis:message(level .. ': ' .. show_message_params.message)
+end
+
 local function ls_handle_notification(ls, notification) -- luacheck: no unused args
   local method = notification.method
   if method == 'textDocument/publishDiagnostics' then
     lspc_handle_publish_diagnostics(ls, notification.params.uri,
                                     notification.params.diagnostics)
+  elseif method == 'window/showMessage' then
+    lspc_handle_show_message(notification.params)
   end
 end
 
