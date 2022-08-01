@@ -113,12 +113,12 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 	lspc-hover - hover over the current line
 	lspc-show-diagnostics - show the available diagnostics of the current line
 
-### Available configuration fields
+### Available configuration options
 
 The module table returned by `require('plugins/vis-lspc')` can be use to configure
 some aspects of vis-lspc.
 
-Available fields are:
+Available options are:
 
 * `name = 'vis-lspc'` - the name vis-lspc introduces itself to a language server
 * `logging = false` - enable logging only useful for debugging vis-lspc
@@ -153,6 +153,8 @@ command line flag](https://microsoft.github.io/language-server-protocol/specific
 
 	-- map of known language servers per syntax
 	lspc.ls_map = {cpp = clangd, ansi_c = clangd}
+
+Language servers configured in vis-lspc can be found in `supported_servers.lua`.
 
 ## License
 

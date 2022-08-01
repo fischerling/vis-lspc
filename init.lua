@@ -227,20 +227,8 @@ local function syntax_to_languageId(syntax)
   return syntax
 end
 
--- clangd language server configuration
-local clangd = {name = 'clangd', cmd = 'clangd'}
-
 -- map of known language servers per syntax
-lspc.ls_map = {
-  cpp = clangd,
-  ansi_c = clangd,
-  -- pylsp (python-lsp-server) language server configuration
-  -- https://github.com/python-lsp/python-lsp-server
-  python = {name = 'python-lsp-server', cmd = 'pylsp'},
-  -- lua (lua-language-server) language server configuration
-  -- https://github.com/sumneko/lua-language-server
-  lua = {name = 'lua-language-server', cmd = 'lua-language-server'},
-}
+lspc.ls_map = dofile(source_path .. 'supported-servers.lua')
 
 -- return the name of the language server for this syntax
 local function get_ls_name_for_syntax(syntax)
