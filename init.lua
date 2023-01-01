@@ -76,7 +76,7 @@ local lspc = {
   -- 60% solarized red
   diagnostic_style = 'back:#e3514f',
 
-  -- message level to show in the UI when eceiving messages from the server
+  -- message level to show in the UI when receiving messages from the server
   -- Error = 1, Warning = 2, Info = 3, Log = 4
   message_level = 3,
 }
