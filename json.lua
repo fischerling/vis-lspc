@@ -17,8 +17,8 @@ object, encoded like so: `{"key1": 2, "key2": false}`.
 
 Because the Lua nil value cannot be a key, and as a table value is considerd
 equivalent to a missing key, there is no way to express the json "null" value in
-a Lua table. The only way this will output "null" is if your entire input obj is
-nil itself.
+a Lua table. The json.null table can be used to encode the json "null" value.
+{key=json.null} will be encoded to `{"key":null}`.
 
 An empty Lua table, {}, could be considered either a json object or array -
 it's an ambiguous edge case. We choose to treat this as an object as it is the
@@ -51,6 +51,9 @@ local json = {}
 -- Internal functions.
 
 local function kind_of(obj)
+  if obj == json.null then
+    return 'nil'
+  end
   if type(obj) ~= 'table' then return type(obj) end
   local i = 1
   for _ in pairs(obj) do
