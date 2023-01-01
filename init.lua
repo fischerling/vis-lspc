@@ -1138,9 +1138,9 @@ local function ls_start_server(syntax)
   end)
 
   local params = {
-    processID = vis_pid,
-    client = {name = lspc.name, version = lspc.version},
-    rootUri = nil,
+    processId = vis_pid,
+    clientInfo = {name = lspc.name, version = lspc.version},
+    rootUri = json.null,
     capabilities = client_capabilites,
   }
 
