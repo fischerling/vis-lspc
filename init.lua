@@ -863,7 +863,10 @@ local function ls_handle_method_response(ls, method_response, req)
   elseif method == 'initialize' then
     ls.initialized = true
     ls.capabilities = result.capabilities
-    ls_send_notification(ls, 'initialized')
+    params = {}
+    setmetatable(params, {__jsontype = 'object'})
+
+    ls_send_notification(ls, 'initialized', params)
 
   elseif method == 'textDocument/completion' then
     lspc_handle_completion_method_response(win, result, req.ctx)
