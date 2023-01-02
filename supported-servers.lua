@@ -16,5 +16,8 @@ return {
   -- typescript (typescript-language-server) language server configuration
   -- https://github.com/typescript-language-server/typescript-language-server
   javascript = typescript,
-  typescript = typescript
+  typescript = typescript,
+  -- dart language server configuration
+  -- https://github.com/dart-lang/sdk/blob/master/pkg/analysis_server/tool/lsp_spec/README.md
+  dart = { name = 'dart', cmd = 'dart language-server --client-id vis-lspc --client-version 0.1.5' }
 }
