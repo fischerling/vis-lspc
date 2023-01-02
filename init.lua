@@ -1054,7 +1054,8 @@ local function lspc_open(ls, win, file)
   end)
 
   -- the server is interested in didSave notifications
-  if ls.capabilities.textDocumentSync.save then
+  if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) ==
+      'table' and ls.capabilities.textDocumentSync.save then
     vis.events.subscribe(vis.events.FILE_SAVE_POST,
                          function(file, path) -- luacheck: ignore file
       for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
