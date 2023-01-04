@@ -1,6 +1,11 @@
 -- Copyright (c) 2022 Florian Fischer. All rights reserved.
 -- Use of this source code is governed by a MIT license found in the LICENSE file.
 -- List of supported and preconfigured language server implementations
+local source_str = debug.getinfo(1, 'S').source:sub(2)
+local source_path = source_str:match('(.*/)')
+
+local lspc = dofile(source_path .. 'lspc.lua')
+
 local clangd = {name = 'clangd', cmd = 'clangd'}
 local typescript = { name = 'typescript', cmd = 'typescript-language-server --stdio' }
 
@@ -19,5 +24,9 @@ return {
   typescript = typescript,
   -- dart language server configuration
   -- https://github.com/dart-lang/sdk/blob/master/pkg/analysis_server/tool/lsp_spec/README.md
-  dart = { name = 'dart', cmd = 'dart language-server --client-id vis-lspc --client-version 0.1.5' }
+  dart = {
+    name = 'dart',
+    cmd = 'dart language-server --client-id vis-lspc --client-version ' ..
+        lspc.version,
+  },
 }
