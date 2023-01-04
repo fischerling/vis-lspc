@@ -333,16 +333,7 @@ end
 local function vis_apply_textEdit(win, file, textEdit)
   assert(win.file == file)
 
-  local start_pos = lsp_pos_to_vis_sel(textEdit.range.start)
-  local end_pos = lsp_pos_to_vis_sel(textEdit.range['end'])
-
-  -- convert the LSP range into a vis range
-  -- this destroys the current selection but we change it after the edit anyway
-  win.selection.anchored = false
-  win.selection:to(start_pos.line, start_pos.col)
-  win.selection.anchored = true
-  win.selection:to(end_pos.line, end_pos.col - 1)
-  local range = win.selection.range
+  local range = lsp_range_to_vis_range(win, textEdit.range)
 
   file:delete(range)
   file:insert(range.start, textEdit.newText)
