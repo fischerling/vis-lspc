@@ -94,8 +94,7 @@ do
 
     -- open the default log file in $XDG_DATA_HOME/vis-lspc
     if not log_file then
-      local xdg_data = os.getenv('XDG_DATA_HOME') or os.getenv('HOME') ..
-                           '/.local/share'
+      local xdg_data = os.getenv('XDG_DATA_HOME') or os.getenv('HOME') .. '/.local/share'
       local log_dir = xdg_data .. '/vis-lspc'
 
       -- ensure the direcoty exists
@@ -659,10 +658,9 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     local old_word_range = win.file:text_object_word(old_pos)
     local old_word = win.file:content(old_word_range)
 
-    lspc.log(string.format(
-                 'Completion old_pos=%d, old_range={start=%d, finish=%d}, old_word=%s',
-                 old_pos, old_word_range.start, old_word_range.finish,
-                 old_word:gsub('\n', '\\n')))
+    lspc.log(string.format('Completion old_pos=%d, old_range={start=%d, finish=%d}, old_word=%s',
+                           old_pos, old_word_range.start, old_word_range.finish,
+                           old_word:gsub('\n', '\\n')))
 
     -- update old_word_range and old_word and return if old_word is a prefix of the completion
     local function does_completion_apply_to_pos(pos)
@@ -689,8 +687,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     local completion_start
     -- we found a completion token -> replace it
     if matches then
-      lspc.log('replace the token: ' .. old_word ..
-                   '  we found being a prefix of the completion')
+      lspc.log('replace the token: ' .. old_word .. '  we found being a prefix of the completion')
       win.file:delete(old_word_range)
       completion_start = old_word_range.start
     else
@@ -715,8 +712,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
 
   local sel = vis_pos_to_sel(win, old_pos)
   local hover_header =
-      '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
-          sel.col .. ' ---'
+      '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' .. sel.col .. ' ---'
 
   local hover_msg = ''
   -- result is MarkedString[]
@@ -745,8 +741,8 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
   local signatures = result.signatures
 
   local sel = vis_pos_to_sel(win, call_pos)
-  local help_header = '--- signature help: ' .. (win.file.path or '') .. ':' ..
-                          sel.line .. ', ' .. sel.col .. ' ---'
+  local help_header = '--- signature help: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
+                          sel.col .. ' ---'
 
   -- local help_msg = json.encode(result)
   local help_msg = ''
@@ -878,8 +874,7 @@ end
 local function ls_handle_notification(ls, notification) -- luacheck: no unused args
   local method = notification.method
   if method == 'textDocument/publishDiagnostics' then
-    lspc_handle_publish_diagnostics(ls, notification.params.uri,
-                                    notification.params.diagnostics)
+    lspc_handle_publish_diagnostics(ls, notification.params.uri, notification.params.diagnostics)
   elseif method == 'window/showMessage' then
     lspc_handle_show_message(notification.params)
   end
@@ -944,8 +939,7 @@ local function lspc_get_usable_ls(syntax)
   end
 
   if not ls.initialized then
-    return nil, 'Language server for ' .. syntax ..
-               ' not initialized yet. Please try again'
+    return nil, 'Language server for ' .. syntax .. ' not initialized yet. Please try again'
   end
 
   return ls
@@ -955,8 +949,9 @@ local function lspc_close(ls, file)
   if not ls.open_files[file.path] then
     return file.path .. ' not open'
   end
-  ls_send_notification(ls, 'textDocument/didClose',
-                       {textDocument = {uri = path_to_uri(file.path)}})
+  ls_send_notification(ls, 'textDocument/didClose', {
+    textDocument = {uri = path_to_uri(file.path)},
+  })
   ls.open_files[file.path] = nil
 end
 
@@ -980,8 +975,7 @@ local function lspc_open(ls, win, file)
   ls.open_files[file.path] = {file = file, version = 0, diagnostics = {}}
   ls_send_notification(ls, 'textDocument/didOpen', params)
 
-  vis.events.subscribe(vis.events.FILE_CLOSE,
-                       function(file) -- luacheck: ignore file
+  vis.events.subscribe(vis.events.FILE_CLOSE, function(file) -- luacheck: ignore file
     for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
       if ls.open_files[file.path] then
         lspc_close(ls, file)
@@ -990,10 +984,9 @@ local function lspc_open(ls, win, file)
   end)
 
   -- the server is interested in didSave notifications
-  if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) ==
-      'table' and ls.capabilities.textDocumentSync.save then
-    vis.events.subscribe(vis.events.FILE_SAVE_POST,
-                         function(file, path) -- luacheck: ignore file
+  if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) == 'table' and
+      ls.capabilities.textDocumentSync.save then
+    vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path) -- luacheck: ignore file
       for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
         if ls.open_files[file.path] then
           local params = {textDocument = {uri = path_to_uri(path)}} -- luacheck: ignore params
@@ -1022,9 +1015,7 @@ local function ls_start_server(syntax)
   if not os.execute('type ' .. exe .. '>/dev/null 2>/dev/null') then
     -- remove the configured language server
     lspc.ls_map[syntax] = nil
-    local msg = string.format(
-                    'Language server for %s configured but %s not found',
-                    syntax, exe)
+    local msg = string.format('Language server for %s configured but %s not found', syntax, exe)
     -- the warning will be visual if the language server was automatically startet
     -- if the user tried to start teh server manually they will see msg as error
     lspc_warn(msg)
@@ -1149,8 +1140,7 @@ local function lspc_show_diagnostic(ls, win, line)
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
                           string.format(diagnostics_fmt, diagnostic.start.line,
-                                        diagnostic.start.col, diagnostic.code,
-                                        diagnostic.message)
+                                        diagnostic.start.col, diagnostic.code, diagnostic.message)
   end
 
   if diagnostics_msg ~= '' then

@@ -29,7 +29,6 @@ return {
   -- https://github.com/dart-lang/sdk/blob/master/pkg/analysis_server/tool/lsp_spec/README.md
   dart = {
     name = 'dart',
-    cmd = 'dart language-server --client-id vis-lspc --client-version ' ..
-        lspc.version,
+    cmd = 'dart language-server --client-id vis-lspc --client-version ' .. lspc.version,
   },
 }
