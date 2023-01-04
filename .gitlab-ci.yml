@@ -1,4 +1,4 @@
-image: muhq/lua-dev:0.1
+image: muhq/lua-dev:0.2
 
 stages:
   - check
