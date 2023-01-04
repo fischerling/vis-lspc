@@ -367,11 +367,19 @@ local function lspc_select(choices)
     return choices[1]
   end
 
+  local status, output
   local cmd = 'printf "' .. menu_input .. '" | ' .. lspc.menu_cmd
   lspc.log('collect choice using: ' .. cmd)
-  local menu = io.popen(cmd)
-  local output = menu:read('*a')
-  local _, _, status = menu:close()
+
+  if lspc.menu_cmd == 'vis-menu' then
+    status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+  else
+    local menu = io.popen(cmd)
+    output = menu:read('*a')
+    local _, _, _status = menu:close()
+    status = _status
+
+  end
 
   local choice = nil
   if status == 0 then
