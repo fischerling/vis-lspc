@@ -2,6 +2,7 @@
 -- Use of this source code is governed by a MIT license found in the LICENSE file.
 -- List of supported and preconfigured language server implementations
 local clangd = {name = 'clangd', cmd = 'clangd'}
+local typescript = { name = 'typescript', cmd = 'typescript-language-server --stdio' }
 
 return {
   cpp = clangd,
@@ -12,4 +13,11 @@ return {
   -- lua (lua-language-server) language server configuration
   -- https://github.com/sumneko/lua-language-server
   lua = {name = 'lua-language-server', cmd = 'lua-language-server'},
+  -- typescript (typescript-language-server) language server configuration
+  -- https://github.com/typescript-language-server/typescript-language-server
+  javascript = typescript,
+  typescript = typescript,
+  -- dart language server configuration
+  -- https://github.com/dart-lang/sdk/blob/master/pkg/analysis_server/tool/lsp_spec/README.md
+  dart = { name = 'dart', cmd = 'dart language-server --client-id vis-lspc --client-version 0.1.5' }
 }
