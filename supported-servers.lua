@@ -7,7 +7,10 @@ local source_path = source_str:match('(.*/)')
 local lspc = dofile(source_path .. 'lspc.lua')
 
 local clangd = {name = 'clangd', cmd = 'clangd'}
-local typescript = { name = 'typescript', cmd = 'typescript-language-server --stdio' }
+local typescript = {
+  name = 'typescript',
+  cmd = 'typescript-language-server --stdio',
+}
 
 return {
   cpp = clangd,

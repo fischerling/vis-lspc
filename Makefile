@@ -10,10 +10,10 @@ check-luacheck:
 	luacheck --globals=vis -- $(LUA_FILES)
 
 check-format:
-	for lf in $(LUA_FILES); do tools/check-format "$${lf}"; done
+	set -e; for lf in $(LUA_FILES); do tools/check-format "$${lf}"; done
 
 format:
 	lua-format -i $(LUA_FILES)
 
 test:
-	for tf in $(TEST_FILES); do "$$tf"; done
+	set -e; for tf in $(TEST_FILES); do "$$tf"; done
