@@ -34,4 +34,8 @@ return {
   -- haskell (haskell-language-server)
   -- https://github.com/haskell/haskell-language-server
   haskell = {name = 'haskell', cmd = 'haskell-language-server-wrapper --lsp'},
+
+  -- ocaml (ocaml-language-server)
+  -- https://github.com/ocaml/ocaml-lsp
+  caml = {name = 'ocaml', cmd = 'ocamllsp'},
 }
