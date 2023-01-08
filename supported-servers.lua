@@ -31,4 +31,7 @@ return {
     name = 'dart',
     cmd = 'dart language-server --client-id vis-lspc --client-version ' .. lspc.version,
   },
+  -- haskell (haskell-language-server)
+  -- https://github.com/haskell/haskell-language-server
+  haskell = {name = 'haskell', cmd = 'haskell-language-server-wrapper --lsp'},
 }
