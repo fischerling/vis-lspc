@@ -1078,7 +1078,7 @@ end
 
 -- generic stub implementation for all textDocument methods taking
 -- a textDocumentPositionParams parameter
-local function lspc_method_doc_pos(ls, method, win, argv)
+local function lspc_method_doc_pos(ls, method, win, argv, additional_params)
   -- check if the language server has a provider for this method
   if not ls.capabilities[method .. 'Provider'] then
     return 'language server ' .. ls.name .. ' does not provide ' .. method
@@ -1089,6 +1089,11 @@ local function lspc_method_doc_pos(ls, method, win, argv)
   end
 
   local params = vis_doc_pos_to_lsp(vis_get_doc_pos(win))
+  if additional_params then
+    for k, v in pairs(additional_params) do
+      params[k] = v
+    end
+  end
 
   ls_call_text_document_method(ls, method, params, win, argv)
 end
@@ -1107,7 +1112,8 @@ local lspc_goto_location_methods = {
     return lspc_method_doc_pos(ls, 'implementation', win, open_cmd)
   end,
   references = function(ls, win, open_cmd)
-    return lspc_method_doc_pos(ls, 'references', win, open_cmd)
+    return lspc_method_doc_pos(ls, 'references', win, open_cmd,
+                               {context = {includeDeclaration = false}})
   end,
 }
 
