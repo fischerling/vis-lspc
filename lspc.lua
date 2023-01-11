@@ -13,7 +13,7 @@ local lspc = {
   autostart = true,
   -- program used to let the user make choices
   -- The available choices are pass to <menu_cmd> on stdin separated by '\n'
-  menu_cmd = 'vis-menu',
+  menu_cmd = 'vis-menu -l 10',
   -- program used to ask the user for confirmation
   confirm_cmd = 'vis-menu',
 
