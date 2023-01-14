@@ -818,7 +818,7 @@ local function ls_handle_method_response(ls, method_response, req)
     lspc_handle_signature_help_method_response(win, result, req.ctx)
 
   elseif method == 'textDocument/rename' then
-    lspc_handle_rename_method_response(win, result, req.ctx)
+    lspc_handle_rename_method_response(win, result)
 
   elseif method == 'shutdown' then
     ls_send_notification(ls, 'exit')
