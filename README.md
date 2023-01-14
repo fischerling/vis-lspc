@@ -138,21 +138,30 @@ you have to create a language server configuration and insert it into the `ls_ma
 table.
 Please have a look at #2 and share your configuration with everyone else.
 
-A language server configuration is a Lua table containing a `name` field which is
-used to manage the language server.
-And a `cmd` field which is used to start the language server.
+A language server configuration is a Lua table containing a at least a `name` field
+which is used to manage the language server and a `cmd` field which is used to
+start the language server.
 
 **Note:** the language server must communicate with vis-lspc via stdio.
 Your language server probably supports stdio but maybe requires a [special
 command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
 
-**Example:** The language server configuration for clangd and its entries in `ls_map`
+Additional field are:
 
-	-- clangd language server configuration
-	local clangd = {name = 'clangd', cmd = 'clangd'}
+* `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
+* `init_options` - table of arbitrary possibly nested data. It is send to the server as `initializationOptions` in the parameters of the `initialize` method call.
 
-	-- map of known language servers per syntax
-	lspc.ls_map = {cpp = clangd, ansi_c = clangd}
+**Example:** The language server configuration entry in the  `ls_map` for lua-language-server
+
+```lua
+ls_map.lua = {
+  name = 'lua-language-server',
+  cmd = 'lua-language-server',
+  settings = {
+    Lua = {diagnostics = {globals = {'vis'}}, telemetry = {enable = false}},
+  },
+},
+```
 
 Language servers configured in vis-lspc can be found in `supported_servers.lua`.
 

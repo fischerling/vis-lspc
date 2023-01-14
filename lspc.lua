@@ -41,7 +41,10 @@ local goto_methods_capabilities = {
 }
 
 local client_capabilites = {
-  workspace = {configuration = false},
+  workspace = {
+    configuration = true,
+    didChangeConfiguration = {dynamicRegistration = false},
+  },
   textDocument = {
     synchronization = {dynamicRegistration = false, didSave = true},
     -- ask the server to send us only plaintext completionItems

@@ -761,6 +761,24 @@ local function lspc_handle_rename_method_response(win, result)
   vis_apply_workspaceEdit(win, win.file, result)
 end
 
+local function lspc_handle_initialize_response(ls, result)
+  ls.initialized = true
+  ls.capabilities = result.capabilities
+
+  local params = {}
+  setmetatable(params, {__jsontype = 'object'})
+  ls_send_notification(ls, 'initialized', params)
+
+  -- According to nvim-lspconfig sendig the lsp server settings shortly after
+  -- initialization is a undocumented convention.
+  -- See https://github.com/neovim/nvim-lspconfig/blob/ed88435764d8b00442e66d39ec3d9c360e560783/CONTRIBUTING.md
+  if ls.settings then
+    ls_send_notification(ls, 'workspace/didChangeConfiguration', {
+      settings = ls.settings,
+    })
+  end
+end
+
 -- method response dispatcher
 local function ls_handle_method_response(ls, method_response, req)
   local win = req.win
@@ -788,12 +806,7 @@ local function ls_handle_method_response(ls, method_response, req)
     lspc_handle_goto_method_response(req, result)
 
   elseif method == 'initialize' then
-    ls.initialized = true
-    ls.capabilities = result.capabilities
-    local params = {}
-    setmetatable(params, {__jsontype = 'object'})
-
-    ls_send_notification(ls, 'initialized', params)
+    lspc_handle_initialize_response(ls, result)
 
   elseif method == 'textDocument/completion' then
     lspc_handle_completion_method_response(win, result, req.ctx)
@@ -825,14 +838,33 @@ local function ls_handle_method_response(ls, method_response, req)
   ls.inflight[method_response.id] = nil
 end
 
+local function lspc_handle_workspace_configuration_call(ls, params, response)
+  local results = {}
+  for _, item in ipairs(params.items) do
+    local t = ls.settings
+    for k in item.section:gmatch('[^.]+') do
+      if not t then
+        break
+      end
+      t = t[k]
+    end
+    table.insert(results, t or json.null)
+  end
+  response.result = results
+end
+
 local function ls_handle_method_call(ls, method_call)
   local method = method_call.method
-  lspc.log('Unknown method call ' .. method)
   local response = {id = method_call.id}
-  response['error'] = {
-    code = jsonrpc.error_codes.MethodNotFound,
-    message = method .. ' not implemented',
-  }
+  if method == 'workspace/configuration' then
+    lspc_handle_workspace_configuration_call(ls, method_call.params, response)
+  else
+    lspc.log('Unknown method call ' .. method)
+    response['error'] = {
+      code = jsonrpc.error_codes.MethodNotFound,
+      message = method .. ' not implemented',
+    }
+  end
   ls_rpc(ls, response)
 end
 
@@ -1027,6 +1059,7 @@ local function ls_start_server(syntax)
 
   local ls = {
     name = ls_conf.name,
+    settings = ls_conf.settings,
     initialized = false,
     id = 0,
     inflight = {},
@@ -1069,6 +1102,10 @@ local function ls_start_server(syntax)
     rootUri = json.null,
     capabilities = lspc.client_capabilites,
   }
+
+  if ls_conf.init_options then
+    params.initializationOptions = ls_conf.init_options
+  end
 
   ls_call_method(ls, 'initialize', params)
 

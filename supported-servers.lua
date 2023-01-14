@@ -20,7 +20,13 @@ return {
   python = {name = 'python-lsp-server', cmd = 'pylsp'},
   -- lua (lua-language-server) language server configuration
   -- https://github.com/sumneko/lua-language-server
-  lua = {name = 'lua-language-server', cmd = 'lua-language-server'},
+  lua = {
+    name = 'lua-language-server',
+    cmd = 'lua-language-server',
+    settings = {
+      Lua = {diagnostics = {globals = {'vis'}}, telemetry = {enable = false}},
+    },
+  },
   -- typescript (typescript-language-server) language server configuration
   -- https://github.com/typescript-language-server/typescript-language-server
   javascript = typescript,
