@@ -30,7 +30,7 @@ If someone can come up with an idea how to solve this I would appreciate contrib
 Communicating with language-servers via other channels than stdin/stdout.
 
 Currently only a handful of language server are configured by default.
-Their configuration acn be found in [`supported_servers.lua`](https://gitlab.com/muhq/vis-lspc/-/blob/main/supported-servers.lua).
+Their configuration can be found in [`supported_servers.lua`](https://gitlab.com/muhq/vis-lspc/-/blob/main/supported-servers.lua).
 
 ## Requirements
 
