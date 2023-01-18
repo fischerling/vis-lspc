@@ -914,7 +914,7 @@ end
 -- for a message response we have a req remembered in the inflight table
 local function ls_handle_method(ls, method)
   local req = ls.inflight[method.id]
-  if req then
+  if req and not method.method then
     ls_handle_method_response(ls, method, req)
   else
     ls_handle_method_call(ls, method)
