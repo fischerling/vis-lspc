@@ -5,7 +5,7 @@ local lspc = {
   -- mapping language server names to their state tables
   running = {},
   name = 'vis-lspc',
-  version = '0.1.7',
+  version = '0.1.8',
   -- write log messages to lspc.log_file
   logging = false,
   log_file = nil,
