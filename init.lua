@@ -499,14 +499,35 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   end
 end
 
-local function lspc_highlight_diagnostics(win, diagnostics)
+local function lspc_highlight_diagnostics(win, diagnostics, style)
+  if not style then
+    style = lspc.diagnostic_style_id
+  end
+
   for _, diagnostic in ipairs(diagnostics) do
-    local range = diagnostic.vis_range
-    -- make sure to highlight only ranges which actually contain the diagnostic
-    if diagnostic.content == win.file:content(range) then
-      win:style(lspc.diagnostic_style_id, range.start, range.finish - 1)
+    if lspc.highlight_diagnostics == 'range' then
+      local range = diagnostic.vis_range
+      -- make sure to highlight only ranges which actually contain the diagnostic
+      if diagnostic.content == win.file:content(range) then
+        win:style(lspc.diagnostic_style_id, range.start, range.finish - 1)
+      end
+    elseif lspc.highlight_diagnostics == 'line' then
+      if not win.style_lineno then
+        lspc_err('Vis build does not support style_lineno')
+        return
+      end
+
+      local start_line = diagnostic.range.start.line + 1
+      local end_line = diagnostic.range['end'].line + 1
+      for line = start_line, end_line, 1 do
+        win:style_lineno(style, line)
+      end
     end
   end
+end
+
+local function lspc_clear_highlight_diagnostics(win, diagnostics)
+  lspc_highlight_diagnostics(win, diagnostics, win.STYLE_DEFAULT)
 end
 
 -- send a rpc message to a language server
@@ -886,6 +907,9 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
       diagnostic.content = vis.win.file:content(diagnostic.vis_range)
     end
 
+    if file.diagnostics then
+      lspc_clear_highlight_diagnostics(vis.win, file.diagnostics)
+    end
     file.diagnostics = diagnostics
 
     lspc.log('remember diagnostics for ' .. file_path)
@@ -1401,10 +1425,10 @@ vis.events.subscribe(vis.events.FILE_OPEN, function(file)
   lspc_open(ls, win, file)
 end)
 
-vis:option_register('lspc-highlight-diagnostics', 'bool', function(value)
+vis:option_register('lspc-highlight-diagnostics', 'string', function(value)
   lspc.highlight_diagnostics = value
   return true
-end, 'Should lspc highlight diagnostics if available')
+end, 'How should lspc highlight available diagnostics')
 
 vis:option_register('lspc-menu-cmd', 'string', function(value)
   lspc.menu_cmd = value
