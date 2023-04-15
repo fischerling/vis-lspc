@@ -131,7 +131,7 @@ Available options are:
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
 * `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
 * `ls_map` - a table mapping vis syntax names to language server configurations
-* `highlight_diagnostics = false` - highlight available diagnostics
+* `highlight_diagnostics = 'line'` - highlight the `range` or `line`number of available diagnostics
 * `diagnostic_style = 'back:#e3514f'` - style used to highlight diagnostics
 
 #### Configure your own Language Server
