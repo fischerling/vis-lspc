@@ -294,7 +294,10 @@ local function lsp_range_to_vis_range(win, lsp_range)
 end
 
 -- open a doc_pos using the vis command <cmd>
-local function vis_open_doc_pos(doc_pos, cmd)
+local function vis_open_doc_pos(doc_pos, cmd, win)
+  if win and win ~= vis.win then
+    vis.win = win
+  end
   assert(cmd)
   vis:command(string.format('%s \'%s\'', cmd, doc_pos.file))
   vis.win.selection:to(doc_pos.line, doc_pos.col)
@@ -305,28 +308,28 @@ end
 -- Stack of edited document positions
 local doc_pos_history = {}
 
--- Open a document position in the active window
 local function vis_push_doc_pos(win)
   local old_doc_pos = vis_get_doc_pos(win)
   table.insert(doc_pos_history, old_doc_pos)
 end
 
 -- open a new doc_pos remembering the old if it is replaced
-local function vis_open_new_doc_pos(doc_pos, cmd)
+local function vis_open_new_doc_pos(doc_pos, cmd, win)
+  win = win or vis.win
   if cmd == 'e' then
-    vis_push_doc_pos(vis.win)
+    vis_push_doc_pos(win)
   end
 
-  vis_open_doc_pos(doc_pos, cmd)
+  vis_open_doc_pos(doc_pos, cmd, win)
 end
 
-local function vis_pop_doc_pos()
+local function vis_pop_doc_pos(win)
   local last_doc_pos = table.remove(doc_pos_history)
   if not last_doc_pos then
     return 'Document history is empty'
   end
 
-  vis_open_doc_pos(last_doc_pos, 'e')
+  vis_open_doc_pos(last_doc_pos, 'e', win)
 end
 
 -- apply a textEdit received from the language server
@@ -611,7 +614,7 @@ local function lspc_handle_goto_method_response(req, result)
   end
 
   local doc_pos = lsp_doc_pos_to_vis(lsp_doc_pos)
-  vis_open_new_doc_pos(doc_pos, req.ctx)
+  vis_open_new_doc_pos(doc_pos, req.ctx, req.win)
 end
 
 local function lspc_handle_completion_method_response(win, result, old_pos)
