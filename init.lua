@@ -104,7 +104,7 @@ do
       local log_file_fmt = log_dir .. '/%s-%s.log'
       local timestamp = os.date('%Y-%m-%dT%H:%M:%S')
       local cwd = capture_cmd('pwd')
-      local basename_cwd = capture_cmd('basename ' .. cwd):match('^%s*(.-)%s*$')
+      local basename_cwd = capture_cmd('basename "' .. cwd .. '"'):match('^%s*(.-)%s*$')
       log_file = log_file_fmt:format(timestamp, basename_cwd)
 
     elseif type(log_file) == 'function' then
