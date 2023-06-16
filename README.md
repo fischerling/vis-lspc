@@ -13,6 +13,7 @@ vis-lspc currently supports:
 * `textDocument/implementation`
 * `textDocument/hover`
 * `textDocument/rename`
+* `textDocument/formatting`
 * `[Diagnostics]`
 
 ## Whats not working
@@ -109,6 +110,7 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 
 	# workspace edits
 	lspc-rename <new name> - rename the identifier under the cursor to <new name>
+	lspc-format - format the file in the current window
 
 	# development support
 	lspc-hover - hover over the current line

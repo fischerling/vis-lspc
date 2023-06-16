@@ -365,6 +365,27 @@ local function vis_apply_textEdit(win, file, textEdit)
   win:draw()
 end
 
+-- apply a list of textEdits received from the language server
+local function vis_apply_textEdits(win, file, textEdits)
+  assert(win.file == file)
+
+  local edits = {}
+  for _, textEdit in ipairs(textEdits) do
+    local range = lsp_range_to_vis_range(win, textEdit.range)
+    table.insert(edits, {
+      mark = file:mark_set(range.start),
+      len = range.finish - range.start,
+      newText = textEdit.newText,
+    })
+  end
+  for _, edit in ipairs(edits) do
+    local pos = file:mark_get(edit.mark)
+    file:delete(pos, edit.len)
+    file:insert(pos, edit.newText)
+  end
+  win:draw()
+end
+
 -- concatenate all numeric values in choices and pass it on stdin to lspc.menu_cmd
 local function lspc_select(choices)
   local menu_input = ''
@@ -782,6 +803,10 @@ local function lspc_handle_rename_method_response(win, result)
   vis_apply_workspaceEdit(win, win.file, result)
 end
 
+local function lspc_handle_formatting_method_response(win, result)
+  vis_apply_textEdits(win, win.file, result)
+end
+
 local function lspc_handle_initialize_response(ls, result)
   ls.initialized = true
   ls.capabilities = result.capabilities
@@ -840,6 +865,9 @@ local function ls_handle_method_response(ls, method_response, req)
 
   elseif method == 'textDocument/rename' then
     lspc_handle_rename_method_response(win, result)
+
+  elseif method == 'textDocument/formatting' then
+    lspc_handle_formatting_method_response(win, result)
 
   elseif method == 'shutdown' then
     ls_send_notification(ls, 'exit')
@@ -1296,6 +1324,31 @@ vis:command_register('lspc-rename', function(argv, _, win)
   params.newName = new_name
 
   ls_call_text_document_method(ls, 'rename', params, win)
+end)
+
+vis:command_register('lspc-format', function(_, _, win)
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  -- check if the language server has a provider for this method
+  if not ls.capabilities['documentFormattingProvider'] then
+    lspc_err('language server ' .. ls.name .. ' does not provide formatting')
+    return
+  end
+
+  if not ls.open_files[win.file.path] then
+    lspc_open(ls, win, win.file)
+  end
+
+  local params = {
+    textDocument = {uri = path_to_uri(win.file.path)},
+    options = {tabSize = 2, insertSpaces = true},
+  }
+
+  ls_call_text_document_method(ls, 'formatting', params, win)
 end)
 
 vis:command_register('lspc-completion', function(_, _, win)
