@@ -147,7 +147,7 @@ start the language server.
 Your language server probably supports stdio but maybe requires a [special
 command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
 
-Additional field are:
+Additional fields are:
 
 * `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
 * `init_options` - table of arbitrary possibly nested data. It is send to the server as `initializationOptions` in the parameters of the `initialize` method call.
