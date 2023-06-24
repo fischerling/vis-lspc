@@ -1109,6 +1109,7 @@ local function ls_start_server(syntax)
   local ls = {
     name = ls_conf.name,
     settings = ls_conf.settings,
+    formatting_options = ls_conf.formatting_options,
     initialized = false,
     id = 0,
     inflight = {},
@@ -1345,8 +1346,12 @@ vis:command_register('lspc-format', function(_, _, win)
 
   local params = {
     textDocument = {uri = path_to_uri(win.file.path)},
-    options = {tabSize = 2, insertSpaces = true},
+    options = ls.formatting_options,
   }
+  if params.options == nil then
+    -- probably a safe default, but this should be hooked up to the vis options
+    params.options = {tabSize = 4, insertSpaces = true}
+  end
 
   ls_call_text_document_method(ls, 'formatting', params, win)
 end)

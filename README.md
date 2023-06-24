@@ -153,6 +153,7 @@ Additional fields are:
 
 * `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
 * `init_options` - table of arbitrary possibly nested data. It is send to the server as `initializationOptions` in the parameters of the `initialize` method call.
+* `formatting_options` - table of configuration data as found in [the LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting). `tabSize` and `insertSpaces` are required.
 
 **Example:** The language server configuration entry in the  `ls_map` for lua-language-server
 
@@ -163,6 +164,7 @@ ls_map.lua = {
   settings = {
     Lua = {diagnostics = {globals = {'vis'}}, telemetry = {enable = false}},
   },
+  formatting_options = {tabSize = 2, insertSpaces = true},
 },
 ```
 
