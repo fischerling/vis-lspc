@@ -1,21 +1,19 @@
 -- Copyright (c) 2022 Florian Fischer. All rights reserved.
-
+--
 -- This file is part of vis-lspc.
-
+--
 -- vis-lspc is free software: you can redistribute it and/or modify it under the
 -- terms of the GNU General Public License as published by the Free Software
 -- Foundation, either version 3 of the License, or (at your option) any later
 -- version.
-
+--
 -- vis-lspc is distributed in the hope that it will be useful, but WITHOUT ANY
 -- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 -- FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
+--
 -- You should have received a copy of the GNU General Public License along with
 -- vis-lspc found in the LICENSE file. If not, see <https://www.gnu.org/licenses/>.
-
--- vis-lspc default bindings
-
+--
 -- List of supported and preconfigured language server implementations
 local source_str = debug.getinfo(1, 'S').source:sub(2)
 local source_path = source_str:match('(.*/)')
