@@ -13,6 +13,7 @@ vis-lspc currently supports:
 * `textDocument/implementation`
 * `textDocument/hover`
 * `textDocument/rename`
+* `textDocument/formatting`
 * `[Diagnostics]`
 
 ## Whats not working
@@ -109,6 +110,7 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 
 	# workspace edits
 	lspc-rename <new name> - rename the identifier under the cursor to <new name>
+	lspc-format - format the file in the current window
 
 	# development support
 	lspc-hover - hover over the current line
@@ -147,10 +149,11 @@ start the language server.
 Your language server probably supports stdio but maybe requires a [special
 command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
 
-Additional field are:
+Additional fields are:
 
 * `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
 * `init_options` - table of arbitrary possibly nested data. It is send to the server as `initializationOptions` in the parameters of the `initialize` method call.
+* `formatting_options` - table of configuration data as found in [the LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting). `tabSize` and `insertSpaces` are required.
 
 **Example:** The language server configuration entry in the  `ls_map` for lua-language-server
 
@@ -161,6 +164,7 @@ ls_map.lua = {
   settings = {
     Lua = {diagnostics = {globals = {'vis'}}, telemetry = {enable = false}},
   },
+  formatting_options = {tabSize = 2, insertSpaces = true},
 },
 ```
 
