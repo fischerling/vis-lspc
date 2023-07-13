@@ -406,6 +406,14 @@ local function vis_open_doc_pos(doc_pos, cmd, win)
   end
   assert(cmd)
   if vis.win.file.path ~= doc_pos.file then
+    if vis.win.file.modified and cmd == 'e' then
+      if lspc_confirm('Save currently open file:') then
+        vis:command('w')
+      else
+        vis:info('Not opening new file, current file has unsaved changes')
+        return
+      end
+    end
     vis:command(string.format('%s \'%s\'', cmd, doc_pos.file))
     vis.win.selection:to(doc_pos.line, doc_pos.col)
     vis:command('lspc-open')
