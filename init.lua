@@ -399,6 +399,10 @@ local function lspc_confirm(prompt)
   return choice == 'yes'
 end
 
+local function vis_open_file(file, cmd)
+  vis:command(('%s %s'):format(cmd, file:gsub('[\\\t "\']', '\\%1'):gsub('\n', '\\n')))
+end
+
 -- open a doc_pos using the vis command <cmd>
 local function vis_open_doc_pos(doc_pos, cmd, win)
   if win and win ~= vis.win then
@@ -414,7 +418,7 @@ local function vis_open_doc_pos(doc_pos, cmd, win)
         return
       end
     end
-    vis:command(string.format('%s \'%s\'', cmd, doc_pos.file))
+    vis_open_file(doc_pos.file, cmd)
     vis.win.selection:to(doc_pos.line, doc_pos.col)
     vis:command('lspc-open')
   else
@@ -530,7 +534,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     -- It is not open currently -> open it
     local opened
     if not win_with_file then
-      vis:command('o ' .. path)
+      vis_open_file(path, 'o')
       win_with_file = vis.win
       opened = true
     end
