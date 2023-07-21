@@ -1438,16 +1438,6 @@ vis:command_register('lspc-show-diagnostics', function(argv, _, win)
   end
 end)
 
-vis:command_register('lspc-open', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
-  if err then
-    lspc_err(err)
-    return
-  end
-
-  lspc_open(ls, win, win.file)
-end)
-
 -- vis-lspc event hooks
 
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
