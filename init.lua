@@ -307,85 +307,6 @@ local function lsp_range_to_vis_range(win, lsp_range)
   return {start = start_pos, finish = finish_pos}
 end
 
--- open a doc_pos using the vis command <cmd>
-local function vis_open_doc_pos(doc_pos, cmd, win)
-  if win and win ~= vis.win then
-    vis.win = win
-  end
-  assert(cmd)
-  if vis.win.file.path ~= doc_pos.file then
-    vis:command(string.format('%s \'%s\'', cmd, doc_pos.file))
-    vis.win.selection:to(doc_pos.line, doc_pos.col)
-    vis:command('lspc-open')
-  else
-    vis.win.selection:to(doc_pos.line, doc_pos.col)
-  end
-end
-
--- Support jumping between document positions
--- Stack of edited document positions
-local doc_pos_history = {}
-
-local function vis_push_doc_pos(win)
-  local old_doc_pos = vis_get_doc_pos(win)
-  table.insert(doc_pos_history, old_doc_pos)
-end
-
--- open a new doc_pos remembering the old if it is replaced
-local function vis_open_new_doc_pos(doc_pos, cmd, win)
-  win = win or vis.win
-  if cmd == 'e' then
-    vis_push_doc_pos(win)
-  end
-
-  vis_open_doc_pos(doc_pos, cmd, win)
-end
-
-local function vis_pop_doc_pos(win)
-  local last_doc_pos = table.remove(doc_pos_history)
-  if not last_doc_pos then
-    return 'Document history is empty'
-  end
-
-  vis_open_doc_pos(last_doc_pos, 'e', win)
-end
-
--- apply a textEdit received from the language server
-local function vis_apply_textEdit(win, file, textEdit)
-  assert(win.file == file)
-
-  local range = lsp_range_to_vis_range(win, textEdit.range)
-
-  file:delete(range)
-  file:insert(range.start, textEdit.newText)
-
-  win.selection.anchored = false
-  win.selection.pos = range.start + string.len(textEdit.newText)
-
-  win:draw()
-end
-
--- apply a list of textEdits received from the language server
-local function vis_apply_textEdits(win, file, textEdits)
-  assert(win.file == file)
-
-  local edits = {}
-  for _, textEdit in ipairs(textEdits) do
-    local range = lsp_range_to_vis_range(win, textEdit.range)
-    table.insert(edits, {
-      mark = file:mark_set(range.start),
-      len = range.finish - range.start,
-      newText = textEdit.newText,
-    })
-  end
-  for _, edit in ipairs(edits) do
-    local pos = file:mark_get(edit.mark)
-    file:delete(pos, edit.len)
-    file:insert(pos, edit.newText)
-  end
-  win:draw()
-end
-
 -- concatenate all numeric values in choices and pass it on stdin to lspc.menu_cmd
 local function lspc_select(choices)
   local menu_input = ''
@@ -476,6 +397,93 @@ local function lspc_confirm(prompt)
 
   vis:redraw()
   return choice == 'yes'
+end
+
+-- open a doc_pos using the vis command <cmd>
+local function vis_open_doc_pos(doc_pos, cmd, win)
+  if win and win ~= vis.win then
+    vis.win = win
+  end
+  assert(cmd)
+  if vis.win.file.path ~= doc_pos.file then
+    if vis.win.file.modified and cmd == 'e' then
+      if lspc_confirm('Save currently open file:') then
+        vis:command('w')
+      else
+        vis:info('Not opening new file, current file has unsaved changes')
+        return
+      end
+    end
+    vis:command(string.format('%s \'%s\'', cmd, doc_pos.file))
+    vis.win.selection:to(doc_pos.line, doc_pos.col)
+    vis:command('lspc-open')
+  else
+    vis.win.selection:to(doc_pos.line, doc_pos.col)
+  end
+end
+
+-- Support jumping between document positions
+-- Stack of edited document positions
+local doc_pos_history = {}
+
+local function vis_push_doc_pos(win)
+  local old_doc_pos = vis_get_doc_pos(win)
+  table.insert(doc_pos_history, old_doc_pos)
+end
+
+-- open a new doc_pos remembering the old if it is replaced
+local function vis_open_new_doc_pos(doc_pos, cmd, win)
+  win = win or vis.win
+  if cmd == 'e' then
+    vis_push_doc_pos(win)
+  end
+
+  vis_open_doc_pos(doc_pos, cmd, win)
+end
+
+local function vis_pop_doc_pos(win)
+  local last_doc_pos = table.remove(doc_pos_history)
+  if not last_doc_pos then
+    return 'Document history is empty'
+  end
+
+  vis_open_doc_pos(last_doc_pos, 'e', win)
+end
+
+-- apply a textEdit received from the language server
+local function vis_apply_textEdit(win, file, textEdit)
+  assert(win.file == file)
+
+  local range = lsp_range_to_vis_range(win, textEdit.range)
+
+  file:delete(range)
+  file:insert(range.start, textEdit.newText)
+
+  win.selection.anchored = false
+  win.selection.pos = range.start + string.len(textEdit.newText)
+
+  win:draw()
+end
+
+-- apply a list of textEdits received from the language server
+local function vis_apply_textEdits(win, file, textEdits)
+  assert(win.file == file)
+
+  local edits = {}
+  for _, textEdit in ipairs(textEdits) do
+    local range = lsp_range_to_vis_range(win, textEdit.range)
+    table.insert(edits, {
+      mark = file:mark_set(range.start),
+      len = range.finish - range.start,
+      newText = textEdit.newText,
+    })
+  end
+  for _, edit in ipairs(edits) do
+    local pos = file:mark_get(edit.mark)
+    file:delete(pos, edit.len)
+    file:insert(pos, edit.newText)
+  end
+  win:draw()
 end
 
 -- apply a WorkspaceEdit received from the language server
