@@ -35,7 +35,7 @@ Their configuration can be found in [`supported_servers.lua`](https://gitlab.com
 
 ## Requirements
 
-* vis must be compiled with the Lua [communicate API](https://github.com/martanne/vis/pull/675).
+* vis must offer the `communicate` API included in vis >= 0.9
 * The language server you want to use. [Microsoft's list of implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/)
 * Optional: the json implementation of your choice
 	* must provide `encode` and `decode` methods

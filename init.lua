@@ -1154,16 +1154,16 @@ local function ls_start_server(syntax)
   lspc.running[ls_conf.name] = ls
 
   -- register the response handler
-  vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, msg, event)
+  vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, event, code, msg)
     if name ~= ls.name then
       return
     end
 
     if event == 'EXIT' or event == 'SIGNAL' then
       if event == 'EXIT' then
-        vis:info('language server exited with: ' .. msg)
+        vis:info('language server exited with: ' .. code)
       else
-        vis:info('language server received signal: ' .. msg)
+        vis:info('language server received signal: ' .. code)
       end
 
       lspc.running[ls.name] = nil
