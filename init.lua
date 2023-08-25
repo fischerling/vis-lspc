@@ -1381,8 +1381,10 @@ vis:command_register('lspc-format', function(_, _, win)
     options = ls.formatting_options,
   }
   if params.options == nil then
-    -- probably a safe default, but this should be hooked up to the vis options
-    params.options = {tabSize = 4, insertSpaces = true}
+    params.options = {
+      tabSize = vis.options.tabwidth,
+      insertSpaces = vis.options.expandtab,
+    }
   end
 
   ls_call_text_document_method(ls, 'formatting', params, win)
