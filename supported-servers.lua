@@ -40,7 +40,6 @@ return {
     settings = {
       Lua = {diagnostics = {globals = {'vis'}}, telemetry = {enable = false}},
     },
-    formatting_options = {tabSize = 2, insertSpaces = true},
   },
   -- typescript (typescript-language-server) language server configuration
   -- https://github.com/typescript-language-server/typescript-language-server
