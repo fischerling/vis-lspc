@@ -170,6 +170,25 @@ ls_map.lua = {
 
 Language servers configured in vis-lspc can be found in `supported_servers.lua`.
 
+### Extensibility
+
+The returned module table also includes functions you can use in your own vis
+configuration.
+
+#### `lspc.lspc_open`
+
+Navigate between or in files, while remembering the current position in a runtime history.
+
+```lua
+lspc_open(win, path, line, col, cmd)
+```
+
+  - `win` - a window in which to open the file
+  - `path` - the path to the file to open
+  - `line` - the line to open. (`nil` for no position within the file).
+  - `col` - same as `line`, but for the column.
+  - `cmd` - vis command to open the file. (`e` or `o`, see vis commands)
+
 ## License
 
 All code except otherwise noted is licensed under the term of GPL-3.
