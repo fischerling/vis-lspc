@@ -822,7 +822,10 @@ local function lspc_handle_rename_method_response(win, result)
 end
 
 local function lspc_handle_formatting_method_response(win, result)
-  vis_apply_textEdits(win, win.file, result)
+  -- The result of textDocument/formatting is defined as TextEdit[] | null
+  if result then
+    vis_apply_textEdits(win, win.file, result)
+  end
 end
 
 local function lspc_handle_initialize_response(ls, result)
