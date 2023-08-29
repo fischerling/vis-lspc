@@ -774,7 +774,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
 
   local hover_msg = ''
   -- result is MarkedString[]
-  if type(result.contents) == 'table' then
+  if type(result.contents) == 'table' and #result.contents > 0 then
     lspc.log('hover returned list of length ' .. #result.contents)
     for i, v in ipairs(result.contents) do
       if i == 1 then
