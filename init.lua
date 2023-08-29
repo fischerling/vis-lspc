@@ -499,7 +499,18 @@ end
 -- apply a WorkspaceEdit received from the language server
 local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   local file_edits = workspaceEdit.changes
-  assert(file_edits)
+  assert(file_edits or workspaceEdit.documentChanges)
+
+  -- try to convert NOT SUPPORTED TextDocumentEdit[]
+  -- We do not announce suppport for versioned DocumentChanges in our
+  -- client capabilities, but some LSP servers ignore our capabilities
+  -- sending them anyway.
+  if not file_edits then
+    file_edits = {}
+    for _, edit in ipairs(workspaceEdit.documentChanges) do
+      file_edits[edit.textDocument.uri] = edit.edits
+    end
+  end
 
   -- generate change summary
   local summary = '--- workspace edit summary ---\n'
