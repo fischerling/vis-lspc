@@ -573,9 +573,8 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
   end
 
   for _, diagnostic in ipairs(diagnostics) do
-    local range = diagnostic.vis_range
-
     if lspc.highlight_diagnostics == 'range' then
+      local range = diagnostic.vis_range
       -- make sure to highlight only ranges which actually contain the diagnostic
       if diagnostic.content == win.file:content(range) then
         win:style(style, range.start, range.finish - 1)
@@ -587,8 +586,8 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
         return
       end
 
-      local start_line = range.start.line + 1
-      local end_line = range['end'].line + 1
+      local start_line = diagnostic.range.start.line + 1
+      local end_line = diagnostic.range['end'].line + 1
       for line = start_line, end_line, 1 do
         win:style_lineno(style, line)
       end
