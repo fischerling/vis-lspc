@@ -1180,16 +1180,16 @@ local function ls_start_server(syntax)
   lspc.running[ls_conf.name] = ls
 
   -- register the response handler
-  vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, msg, event)
+  vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, event, code, msg)
     if name ~= ls.name then
       return
     end
 
     if event == 'EXIT' or event == 'SIGNAL' then
       if event == 'EXIT' then
-        vis:info('language server exited with: ' .. msg)
+        vis:info('language server exited with: ' .. code)
       else
-        vis:info('language server received signal: ' .. msg)
+        vis:info('language server received signal: ' .. code)
       end
 
       lspc.running[ls.name] = nil
@@ -1407,8 +1407,10 @@ vis:command_register('lspc-format', function(_, _, win)
     options = ls.formatting_options,
   }
   if params.options == nil then
-    -- probably a safe default, but this should be hooked up to the vis options
-    params.options = {tabSize = 4, insertSpaces = true}
+    params.options = {
+      tabSize = win.options.tabwidth,
+      insertSpaces = win.options.expandtab,
+    }
   end
 
   ls_call_text_document_method(ls, 'formatting', params, win)
