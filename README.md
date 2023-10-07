@@ -1,10 +1,10 @@
-# vis-lspc
+# `vis-lspc`
 
-A language server protocol client for the [vis editor](https://github.com/martanne/vis).
+A language server protocol client for the [`vis` editor](https://github.com/martanne/vis).
 
-## Whats working
+## What's working
 
-vis-lspc currently supports:
+`vis-lspc` currently supports:
 * `textDocument/completion`
 * `textDocument/declaration`
 * `textDocument/definition`
@@ -16,7 +16,7 @@ vis-lspc currently supports:
 * `textDocument/formatting`
 * `[Diagnostics]`
 
-## Whats not working
+## What's not working
 
 Everything else.
 
@@ -30,37 +30,37 @@ If someone can come up with an idea how to solve this I would appreciate contrib
 
 Communicating with language-servers via other channels than stdin/stdout.
 
-Currently only a handful of language server are configured by default.
+Currently, only a handful of language servers are configured by default.
 Their configuration can be found in [`supported_servers.lua`](https://gitlab.com/muhq/vis-lspc/-/blob/main/supported-servers.lua).
 
 ## Requirements
 
-* vis must offer the `communicate` Lua API
-  * The API included in vis >= 0.9 is supported on the main branch
+* `vis` must offer the `communicate` Lua API
+  * The API included in `vis` >= 0.9 is supported on the main branch
   * For legacy support using the [first API draft patches](https://github.com/martanne/vis/pull/675) use the v0.2.x branch
 * The language server you want to use. [Microsoft's list of implementations](https://microsoft.github.io/language-server-protocol/implementors/servers/)
-* Optional: the json implementation of your choice
+* Optional: the JSON implementation of your choice
 	* must provide `encode` and `decode` methods
-	* vis-lspc tries to find a suitable json implementation using those candidates:
-		* json
-		* cjson
-		* dkjson
+	* `vis-lspc` tries to find a suitable JSON implementation using those candidates:
+		* `json`
+		* `cjson`
+		* `dkjson`
 		* bundled fallback (no utf8 support)
 
 ## Installation
 
-1. Clone this repository into your vis plugins directory
+1. Clone this repository into your `vis` plugins directory
 2. Load the plugin in your `visrc.lua` with `require('plugins/vis-lspc')`
 
-## Easy vis-lspc installation with GuixRUs
+## Easy `vis-lspc` installation with `Guix 'R Us`
 
-The [GuixRUs](https://git.sr.ht/~whereiseveryone/guixrus) channel provides a fork of `vis` with the [communicate](https://github.com/martanne/vis/pull/675) API patches applied. Additionally, `vis-lspc` is bundled for convenience.
+The [`Guix 'R Us`](https://git.sr.ht/~whereiseveryone/guixrus) channel provides a fork of `vis` with the [communicate](https://github.com/martanne/vis/pull/675) API patches applied. Additionally, `vis-lspc` is bundled for convenience.
 
-After [adding GuixRUs](https://git.sr.ht/~whereiseveryone/guixrus#permanent) to your [channels.scm](https://guix.gnu.org/manual/en/html_node/Using-a-Custom-Guix-Channel.html), run the following command to build and install `vis-lsp`:
+After [adding `Guix 'R Us`](https://git.sr.ht/~whereiseveryone/guixrus#permanent) to your [`channels.scm`](https://guix.gnu.org/manual/en/html_node/Using-a-Custom-Guix-Channel.html), run the following command to build and install `vis-lsp`:
 
 `guix install vis-lsp`
 
-Alternatively, you can clone GuixRUs and install from a local git checkout:
+Alternatively, you can clone `Guix 'R Us` and install from a local git checkout:
 
 `git clone https://git.sr.ht/~whereiseveryone/guixrus`
 
@@ -70,7 +70,7 @@ Alternatively, you can clone GuixRUs and install from a local git checkout:
 
 ## Usage
 
-vis-lspc is in a early state, but if you are brave there are some default key bindings:
+`vis-lspc` provides some default key bindings:
 
 ### Default Bindings
 
@@ -122,44 +122,44 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 
 ### Available configuration options
 
-The module table returned by `require('plugins/vis-lspc')` can be use to configure
-some aspects of vis-lspc.
+The module table returned by `require('plugins/vis-lspc')` can be used to configure
+some aspects of `vis-lspc`.
 
 Available options are:
 
-* `name = 'vis-lspc'` - the name vis-lspc introduces itself to a language server
-* `logging = false` - enable logging only useful for debugging vis-lspc
+* `name = 'vis-lspc'` - the name `vis-lspc` introduces itself to a language server
+* `logging = false` - enable logging only useful for debugging `vis-lspc`
 * `log_file = nil` - nil, filename or function returning a filename
-  * If `log_file` is `nil` vis-lspc will create a new file in `$XDG_DATA_HOME/vis-lspc`
+  * If `log_file` is `nil` `vis-lspc` will create a new file in `$XDG_DATA_HOME/vis-lspc`
 * `autostart = true` - try to start a language server in WIN_OPEN
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
 * `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
-* `ls_map` - a table mapping vis syntax names to language server configurations
+* `ls_map` - a table mapping `vis` syntax names to language server configurations
 * `highlight_diagnostics = 'line'` - highlight the `range` or `line`number of available diagnostics
 * `diagnostic_style = 'back:#e3514f'` - style used to highlight diagnostics
 
 #### Configure your own Language Server
 
-If vis-lspc has no language server configuration for your desired language or server
+If `vis-lspc` has no language server configuration for your desired language or server
 you have to create a language server configuration and insert it into the `ls_map`
 table.
 Please have a look at #2 and share your configuration with everyone else.
 
-A language server configuration is a Lua table containing a at least a `name` field
+A language server configuration is a Lua table containing at least a `name` field
 which is used to manage the language server and a `cmd` field which is used to
 start the language server.
 
-**Note:** the language server must communicate with vis-lspc via stdio.
+**Note:** the language server must communicate with `vis-lspc` via stdio.
 Your language server probably supports stdio but maybe requires a [special
 command line flag](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#implementationConsiderations).
 
 Additional fields are:
 
 * `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
-* `init_options` - table of arbitrary possibly nested data. It is send to the server as `initializationOptions` in the parameters of the `initialize` method call.
+* `init_options` - table of arbitrary possibly nested data. It will be sent to the server as `initializationOptions` in the parameters of the `initialize` method call.
 * `formatting_options` - table of configuration data as found in [the LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting). `tabSize` and `insertSpaces` are required.
 
-**Example:** The language server configuration entry in the  `ls_map` for lua-language-server
+**Example:** The language server configuration entry in the `ls_map` for `lua-language-server`
 
 ```lua
 ls_map.lua = {
@@ -172,11 +172,11 @@ ls_map.lua = {
 },
 ```
 
-Language servers configured in vis-lspc can be found in `supported_servers.lua`.
+Language servers configured in `vis-lspc` can be found in `supported_servers.lua`.
 
 ### Extensibility
 
-The returned module table also includes functions you can use in your own vis
+The returned module table also includes functions you can use in your own `vis`
 configuration.
 
 #### `lspc.lspc_open`
@@ -191,12 +191,12 @@ lspc_open(win, path, line, col, cmd)
   - `path` - the path to the file to open
   - `line` - the line to open. (`nil` for no position within the file).
   - `col` - same as `line`, but for the column.
-  - `cmd` - vis command to open the file. (`e` or `o`, see vis commands)
+  - `cmd` - `vis` command to open the file. (`e` or `o`, see `vis` commands)
 
 ## License
 
 All code except otherwise noted is licensed under the term of GPL-3.
 See the LICENSE file for more details.
-Our fallback json implementation in json.lua is NOT licensed under GPL-3.
+Our fallback JSON implementation in `json.lua` is NOT licensed under GPL-3.
 It is taken from [here](https://gist.github.com/tylerneylon/59f4bcf316be525b30ab)
 and is put into public domain by [Tyler Neylon](https://github.com/tylerneylon).
