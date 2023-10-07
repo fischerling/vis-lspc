@@ -117,6 +117,8 @@ vis-lspc is in a early state, but if you are brave there are some default key bi
 	# development support
 	lspc-hover - hover over the current line
 	lspc-show-diagnostics - show the available diagnostics of the current line
+	lspc-next-diagnostics - jump to the next available diagnostic
+	lspc-prev-diagnostics - jump to the previous available diagnostic
 
 ### Available configuration options
 

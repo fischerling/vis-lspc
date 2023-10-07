@@ -1260,6 +1260,55 @@ local lspc_goto_location_methods = {
   end,
 }
 
+local function lspc_goto_next_diagnostic(ls, win, reverse)
+  if not ls.open_files[win.file.path] then
+    lspc_open(ls, win, win.file)
+  end
+
+  local open_file = ls.open_files[win.file.path]
+
+  local diagnostics = open_file.diagnostics
+  if not diagnostics or not #diagnostics then
+    return win.file.path .. ' has no diagnostics available'
+  end
+
+  local sel = get_selection(win)
+
+  local previous_diagnostic
+  for _, diagnostic in ipairs(diagnostics) do
+    local start = lsp_pos_to_vis_sel(diagnostic.range.start)
+    local fin = lsp_pos_to_vis_sel(diagnostic.range['end'])
+
+    -- reverse
+    if reverse and
+        (start.line > sel.line or
+            (start.line == sel.line and (start.col >= sel.col or sel.col <= fin.col))) then
+
+      -- wrap around
+      if not previous_diagnostic then
+        previous_diagnostic = lsp_pos_to_vis_sel(diagnostics[#diagnostics].range.start)
+      end
+
+      win.selection:to(previous_diagnostic.line, previous_diagnostic.col)
+      return
+    end
+
+    -- forward
+    if start.line > sel.line or (start.line == sel.line and start.col > sel.col) then
+      win.selection:to(start.line, start.col)
+      return
+    end
+
+    previous_diagnostic = start
+  end
+
+  -- wrap around
+  if #diagnostics > 0 then
+    local first = lsp_pos_to_vis_sel(diagnostics[1].range.start)
+    win.selection:to(first.line, first.col)
+  end
+end
+
 local function lspc_show_diagnostic(ls, win, line)
   if not ls.open_files[win.file.path] then
     lspc_open(ls, win, win.file)
@@ -1470,6 +1519,27 @@ vis:command_register('lspc-open', function(_, _, win)
   end
 
   lspc_open(ls, win, win.file)
+end)
+
+local function _lspc_next_diagnostic(win, reverse)
+  local ls, err = lspc_get_usable_ls(win.syntax)
+  if err then
+    lspc_err(err)
+    return
+  end
+
+  err = lspc_goto_next_diagnostic(ls, win, reverse)
+  if err then
+    lspc_err(err)
+  end
+end
+
+vis:command_register('lspc-next-diagnostic', function(_, _, win)
+  _lspc_next_diagnostic(win, false)
+end)
+
+vis:command_register('lspc-prev-diagnostic', function(_, _, win)
+  _lspc_next_diagnostic(win, true)
 end)
 
 vis:command_register('lspc-show-diagnostics', function(argv, _, win)
