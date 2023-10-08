@@ -1513,8 +1513,8 @@ vis:command_register('lspc-close', function(_, _, win)
   lspc_close(ls, win.file)
 end)
 
-vis:command_register('lspc-open', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+vis:command_register('lspc-open', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
   if err then
     lspc_err(err)
     return
@@ -1523,8 +1523,8 @@ vis:command_register('lspc-open', function(_, _, win)
   lspc_open(ls, win, win.file)
 end)
 
-local function _lspc_next_diagnostic(win, reverse)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+local function _lspc_next_diagnostic(win, syntax, reverse)
+  local ls, err = lspc_get_usable_ls(syntax)
   if err then
     lspc_err(err)
     return
@@ -1536,22 +1536,22 @@ local function _lspc_next_diagnostic(win, reverse)
   end
 end
 
-vis:command_register('lspc-next-diagnostic', function(_, _, win)
-  _lspc_next_diagnostic(win, false)
+vis:command_register('lspc-next-diagnostic', function(argv, _, win)
+  _lspc_next_diagnostic(win, argv[1] or win.syntax, false)
 end)
 
-vis:command_register('lspc-prev-diagnostic', function(_, _, win)
-  _lspc_next_diagnostic(win, true)
+vis:command_register('lspc-prev-diagnostic', function(argv, _, win)
+  _lspc_next_diagnostic(win, argv[1] or win.syntax, true)
 end)
 
 vis:command_register('lspc-show-diagnostics', function(argv, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
   if err then
     lspc_err(err)
     return
   end
 
-  err = lspc_show_diagnostic(ls, win, argv[1])
+  err = lspc_show_diagnostic(ls, win, argv[2])
   if err then
     lspc_err(err)
   end
