@@ -975,7 +975,7 @@ end
 local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
   local file_path = uri_to_path(uri)
   local file = ls.open_files[file_path]
-  if file and file_path == vis.win.file.path then
+  if file then
     for _, diagnostic in ipairs(diagnostics) do
       -- We convert the lsp_range to a vis_range here to do it only once.
       -- And because we can't do it during a WIN_HIGHLIGHT events because
@@ -991,7 +991,9 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
     end
     file.diagnostics = diagnostics
 
-    lspc.log('remember diagnostics for ' .. file_path)
+    lspc.log('remembered ' .. #diagnostics .. ' diagnostics for ' .. file_path)
+  else
+    lspc.log('Diagnostics for not opened file' .. file_path)
   end
 end
 
