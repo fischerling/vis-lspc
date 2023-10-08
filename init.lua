@@ -1319,7 +1319,7 @@ local function lspc_show_diagnostic(ls, win, line)
   local open_file = ls.open_files[win.file.path]
 
   local diagnostics = open_file.diagnostics
-  if not diagnostics then
+  if not diagnostics or #diagnostics == 0 then
     return win.file.path .. ' has no diagnostics available'
   end
 
