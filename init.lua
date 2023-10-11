@@ -575,9 +575,17 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
   for _, diagnostic in ipairs(diagnostics) do
     if lspc.highlight_diagnostics == 'range' then
       local range = diagnostic.vis_range
+
       -- make sure to highlight only ranges which actually contain the diagnostic
+      local finish = range.finish - 1
+
+      -- in some instances the range defined by the diagnostic message starts and ends at the same position
+      if finish < range.start then
+	      finish = range.finish
+      end
+
       if diagnostic.content == win.file:content(range) then
-        win:style(style, range.start, range.finish - 1)
+        win:style(style, range.start, finish)
       end
 
     elseif lspc.highlight_diagnostics == 'line' then
@@ -1337,7 +1345,7 @@ local function lspc_show_diagnostic(ls, win, line)
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
                           string.format(diagnostics_fmt, diagnostic.start.line,
-                                        diagnostic.start.col, diagnostic.code, diagnostic.message)
+                                        diagnostic.start.col, diagnostic.code or 'error', diagnostic.message)
   end
 
   if diagnostics_msg ~= '' then
