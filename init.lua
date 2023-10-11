@@ -575,9 +575,19 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
   for _, diagnostic in ipairs(diagnostics) do
     if lspc.highlight_diagnostics == 'range' then
       local range = diagnostic.vis_range
+
+      -- LSP ranges use an exclusive finish
+      local finish = range.finish - 1
+
+      -- In some instances the range defined by the diagnostic starts
+      -- and ends at the same position. Highlight the exact position.
+      if range.finish == range.start then
+        finish = range.finish
+      end
+
       -- make sure to highlight only ranges which actually contain the diagnostic
       if diagnostic.content == win.file:content(range) then
-        win:style(style, range.start, range.finish - 1)
+        win:style(style, range.start, finish)
       end
 
     elseif lspc.highlight_diagnostics == 'line' then
@@ -1339,7 +1349,8 @@ local function lspc_show_diagnostic(ls, win, line)
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
                           string.format(diagnostics_fmt, diagnostic.start.line,
-                                        diagnostic.start.col, diagnostic.code, diagnostic.message)
+                                        diagnostic.start.col, diagnostic.code or 'diagnostic',
+                                        diagnostic.message)
   end
 
   if diagnostics_msg ~= '' then
