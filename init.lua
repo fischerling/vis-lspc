@@ -579,12 +579,6 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
       -- LSP ranges use an exclusive finish
       local finish = range.finish - 1
 
-      -- In some instances the range defined by the diagnostic starts
-      -- and ends at the same position. Highlight the exact position.
-      if range.finish == range.start then
-        finish = range.finish
-      end
-
       -- make sure to highlight only ranges which actually contain the diagnostic
       if diagnostic.content == win.file:content(range) then
         win:style(style, range.start, finish)
@@ -991,6 +985,15 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
       -- And because we can't do it during a WIN_HIGHLIGHT events because
       -- lsp_range_to_vis_range modifies the primary selection
       diagnostic.vis_range = lsp_range_to_vis_range(vis.win, diagnostic.range)
+
+      -- In some instances the range defined by the diagnostic starts
+      -- and ends at the same position. Highlight the exact position.
+      if diagnostic.vis_range.finish == diagnostic.vis_range.start then
+        -- We fake a one char range to retrieve its content.
+        -- In highlight_diagnostics we inconditionally decrement finish anyway.
+        diagnostic.vis_range.finish = diagnostic.vis_range.finish + 1
+      end
+
       -- Remember the content of the diagnostic to only highlight it if the content
       -- did not change
       diagnostic.content = vis.win.file:content(diagnostic.vis_range)
