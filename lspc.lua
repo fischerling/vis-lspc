@@ -34,7 +34,7 @@ local lspc = {
   -- should diagnostics be highlighted if available
   highlight_diagnostics = false,
   -- style id used by lspc to register the style used to highlight diagnostics
-  diagnostic_style_id = 43,
+  diagnostic_style_id = 64, -- 64 is the last style id available for the lexer styles. See vis/ui.h.
   -- style used by lspc to highlight the diagnostic range
   -- 60% solarized red
   diagnostic_style = 'back:#e3514f',
