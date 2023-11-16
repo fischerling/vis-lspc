@@ -693,8 +693,8 @@ end
 
 local function ls_send_did_change(ls, file)
   lspc.log('send didChange')
-  local new_version = assert(ls.open_files[file.path]).version + 1
-  ls.open_files[file.path].version = new_version
+  local new_version = assert(lspc.open_files[file.path]).version + 1
+  lspc.open_files[file.path].version = new_version
 
   local document = {uri = path_to_uri(file.path), version = new_version}
   local changes = {{text = file:content(0, file.size)}}
@@ -1054,7 +1054,7 @@ end
 -- save the diagnostics received for a file uri
 local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
   local file_path = uri_to_path(uri)
-  local file = ls.open_files[file_path]
+  local file = lspc.open_files[file_path]
   if file then
     for _, diagnostic in ipairs(diagnostics) do
       -- We convert the lsp_range to a vis_range here to do it only once.
@@ -1169,22 +1169,35 @@ local function lspc_get_usable_ls(syntax)
 end
 
 local function lspc_close(ls, file)
-  if not ls.open_files[file.path] then
+  if not lspc.open_files[file.path] then
     return file.path .. ' not open'
   end
   ls_send_notification(ls, 'textDocument/didClose', {
     textDocument = {uri = path_to_uri(file.path)},
   })
-  ls.open_files[file.path] = nil
+  lspc.open_files[file.path] = nil
+  file.lspc = nil
 end
 
 -- register a file as open with a language server and setup a close and save event handlers
 -- A file must be opened before any textDocument functions can be used with it.
 local function lspc_open(ls, win, file)
   -- already opened
-  if ls.open_files[file.path] then
+  if lspc.open_files[file.path] then
     return file.path .. ' already open'
   end
+
+  local lspc_file_handle = lspc.open_files[file.path]
+  if not lspc_file_handle then
+    lspc_file_handle = {
+      file = file,
+      version = 0,
+      diagnostics = {},
+      language_servers = {},
+    }
+  end
+  table.insert(lspc_file_handle.language_servers, ls)
+  lspc.open_files[file.path] = lspc_file_handle
 
   local params = {
     textDocument = {
@@ -1195,12 +1208,11 @@ local function lspc_open(ls, win, file)
     },
   }
 
-  ls.open_files[file.path] = {file = file, version = 0, diagnostics = {}}
   ls_send_notification(ls, 'textDocument/didOpen', params)
 
   vis.events.subscribe(vis.events.FILE_CLOSE, function(file) -- luacheck: ignore file
     for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
-      if ls.open_files[file.path] then
+      if lspc.open_files[file.path] then
         lspc_close(ls, file)
       end
     end
@@ -1211,7 +1223,7 @@ local function lspc_open(ls, win, file)
       ls.capabilities.textDocumentSync.save then
     vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path) -- luacheck: ignore file
       for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
-        if ls.open_files[file.path] then
+        if lspc.open_files[file.path] then
           local params = {textDocument = {uri = path_to_uri(path)}} -- luacheck: ignore params
           ls_send_notification(ls, 'textDocument/didSave', params)
         end
@@ -1314,7 +1326,7 @@ local function lspc_method_doc_pos(ls, method, win, argv, additional_params)
     return 'language server ' .. ls.name .. ' does not provide ' .. method
   end
 
-  if not ls.open_files[win.file.path] then
+  if not lspc.open_files[win.file.path] then
     lspc_open(ls, win, win.file)
   end
 
@@ -1348,11 +1360,11 @@ local lspc_goto_location_methods = {
 }
 
 local function lspc_goto_next_diagnostic(ls, win, reverse)
-  if not ls.open_files[win.file.path] then
+  if not lspc.open_files[win.file.path] then
     lspc_open(ls, win, win.file)
   end
 
-  local open_file = ls.open_files[win.file.path]
+  local open_file = lspc.open_files[win.file.path]
 
   local diagnostics = open_file.diagnostics
   if not diagnostics or not #diagnostics then
@@ -1397,11 +1409,11 @@ local function lspc_goto_next_diagnostic(ls, win, reverse)
 end
 
 local function lspc_show_diagnostic(ls, win, line)
-  if not ls.open_files[win.file.path] then
+  if not lspc.open_files[win.file.path] then
     lspc_open(ls, win, win.file)
   end
 
-  local open_file = ls.open_files[win.file.path]
+  local open_file = lspc.open_files[win.file.path]
 
   local diagnostics = open_file.diagnostics
   if not diagnostics or #diagnostics == 0 then
@@ -1511,7 +1523,7 @@ vis:command_register('lspc-rename', function(argv, _, win)
     return
   end
 
-  if not ls.open_files[win.file.path] then
+  if not lspc.open_files[win.file.path] then
     lspc_open(ls, win, win.file)
   end
 
@@ -1534,7 +1546,7 @@ vis:command_register('lspc-format', function(_, _, win)
     return
   end
 
-  if not ls.open_files[win.file.path] then
+  if not lspc.open_files[win.file.path] then
     lspc_open(ls, win, win.file)
   end
 
@@ -1661,7 +1673,7 @@ local function highlight_event()
     return
   end
 
-  local open_file = ls.open_files[win.file.path]
+  local open_file = lspc.open_files[win.file.path]
   if open_file and open_file.diagnostics and lspc.highlight_diagnostics then
     lspc_highlight_diagnostics(win, open_file.diagnostics)
   end

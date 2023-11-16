@@ -18,6 +18,7 @@
 local lspc = {
   -- mapping language server names to their state tables
   running = {},
+  open_files = {},
   name = 'vis-lspc',
   version = '0.1.8',
   -- write log messages to lspc.log_file
