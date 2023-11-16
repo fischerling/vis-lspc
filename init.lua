@@ -1376,17 +1376,44 @@ local lspc_goto_location_methods = {
   end,
 }
 
-local function lspc_goto_next_diagnostic(ls, win, reverse)
+local function has_diagnostics(file)
+  if not file or not file.diagnostics then
+    return false
+  end
+
+  -- detect if at least one server has published diagnostics
+  for _, d in pairs(file.diagnostics) do
+    if #d then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function lspc_goto_next_diagnostic(win, reverse)
   if not lspc.open_files[win.file.path] then
-    lspc_open(ls, win, win.file)
+    vis:command('lspc-open')
   end
 
   local open_file = lspc.open_files[win.file.path]
 
-  local diagnostics = open_file.diagnostics
-  if not diagnostics or not #diagnostics then
+  if not has_diagnostics(open_file) then
     return win.file.path .. ' has no diagnostics available'
   end
+
+  -- merge diagnostics
+  -- TODO: come up with more efficient algorithm
+  local diagnostics = {}
+  for _, server_diagnostics in pairs(open_file.diagnostics) do
+    for _, diagnostic in ipairs(server_diagnostics) do
+      table.insert(diagnostics, diagnostic)
+    end
+  end
+  -- sort the merged diagnostics
+  table.sort(diagnostics, function(d1, d2)
+    return lsp_range_starts_before(d1.range, d2.range)
+  end)
 
   local sel = get_selection(win)
 
@@ -1431,16 +1458,10 @@ local function lspc_show_diagnostic(win, line)
   end
   local file = lspc.open_files[win.file.path]
 
-  local diagnostics = file.diagnostics
-  if not diagnostics or not (function() -- detect if at least one server has diagnostics
-    for _, d in pairs(diagnostics) do
-      if #d then
-        return true
-      end
-    end
-  end)() then
+  if not has_diagnostics(file) then
     return win.file.path .. ' has no diagnostics available'
   end
+  local diagnostics = file.diagnostics
 
   line = line or get_selection(win).line
   lspc.log('Show diagnostics for ' .. line)
@@ -1646,25 +1667,19 @@ vis:command_register('lspc-open', function(argv, _, win)
   lspc_open(ls, win, win.file)
 end)
 
-local function _lspc_next_diagnostic(win, syntax, reverse)
-  local ls, err = lspc_get_usable_ls(syntax)
-  if err then
-    lspc_err(err)
-    return
-  end
-
-  err = lspc_goto_next_diagnostic(ls, win, reverse)
+local function _lspc_next_diagnostic(win, reverse)
+  local err = lspc_goto_next_diagnostic(win, reverse)
   if err then
     lspc_err(err)
   end
 end
 
-vis:command_register('lspc-next-diagnostic', function(argv, _, win)
-  _lspc_next_diagnostic(win, argv[1] or win.syntax, false)
+vis:command_register('lspc-next-diagnostic', function(_, _, win)
+  _lspc_next_diagnostic(win, false)
 end)
 
-vis:command_register('lspc-prev-diagnostic', function(argv, _, win)
-  _lspc_next_diagnostic(win, argv[1] or win.syntax, true)
+vis:command_register('lspc-prev-diagnostic', function(_, _, win)
+  _lspc_next_diagnostic(win, true)
 end)
 
 vis:command_register('lspc-show-diagnostics', function(argv, _, win)
