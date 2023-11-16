@@ -312,6 +312,16 @@ local function lsp_range_to_vis_range(win, lsp_range)
   return {start = start_pos, finish = finish_pos}
 end
 
+-- return true if p1 is before p2
+local function lsp_pos_before(p1, p2)
+  return p1.line < p2.line or (p1.line == p2.line and p1.character < p2.character)
+end
+
+-- return true if r1 starts before r2
+local function lsp_range_starts_before(r1, r2)
+  return lsp_pos_before(r1.start, r2.start)
+end
+
 -- concatenate all numeric values in choices and pass it on stdin to lspc.menu_cmd
 local function lspc_select(choices)
   local menu_input = ''
