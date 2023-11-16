@@ -622,7 +622,7 @@ local function file_lineno_to_viewport_lineno(win, file_lineno)
   end
 end
 
-local function lspc_highlight_diagnostics(win, diagnostics, style)
+local function lspc_highlight_server_diagnostics(win, server_diagnostics, style)
   if not style then
     style = lspc.diagnostic_style_id or win.STYLE_LEXER_MAX
   end
@@ -634,7 +634,7 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
     [4] = lspc.diagnostic_styles.hint,
   }
 
-  for _, diagnostic in ipairs(diagnostics) do
+  for _, diagnostic in ipairs(server_diagnostics) do
     local diagnostic_style = level_mapping[diagnostic.severity] or level_mapping[1]
     assert(win:style_define(style, diagnostic_style))
 
@@ -668,6 +668,12 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
         end
       end
     end
+  end
+end
+
+local function lspc_highlight_diagnostics(win, diagnostics, style)
+  for _, server_diagnostics in pairs(diagnostics) do
+    lspc_highlight_server_diagnostics(win, server_diagnostics, style)
   end
 end
 
@@ -1075,7 +1081,8 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
       diagnostic.content = vis.win.file:content(diagnostic.vis_range)
     end
 
-    file.diagnostics = diagnostics
+    file.diagnostics[ls] = diagnostics
+
     lspc.log('remembered ' .. #diagnostics .. ' diagnostics for ' .. file_path)
   else
     lspc.log('Diagnostics for not opened file' .. file_path)
@@ -1408,34 +1415,42 @@ local function lspc_goto_next_diagnostic(ls, win, reverse)
   end
 end
 
-local function lspc_show_diagnostic(ls, win, line)
+local function lspc_show_diagnostic(win, line)
   if not lspc.open_files[win.file.path] then
-    lspc_open(ls, win, win.file)
+    vis:command('lspc-open')
   end
+  local file = lspc.open_files[win.file.path]
 
-  local open_file = lspc.open_files[win.file.path]
-
-  local diagnostics = open_file.diagnostics
-  if not diagnostics or #diagnostics == 0 then
+  local diagnostics = file.diagnostics
+  if not diagnostics or not (function() -- detect if at least one server has diagnostics
+    for _, d in pairs(diagnostics) do
+      if #d then
+        return true
+      end
+    end
+  end)() then
     return win.file.path .. ' has no diagnostics available'
   end
 
   line = line or get_selection(win).line
   lspc.log('Show diagnostics for ' .. line)
   local diagnostics_to_show = {}
-  for _, diagnostic in ipairs(diagnostics) do
-    local start = lsp_pos_to_vis_sel(diagnostic.range.start)
-    if start.line == line then
-      diagnostic.start = start
-      table.insert(diagnostics_to_show, diagnostic)
+  for ls, server_diagnostics in pairs(diagnostics) do
+    for _, diagnostic in ipairs(server_diagnostics) do
+      local start = lsp_pos_to_vis_sel(diagnostic.range.start)
+      if start.line == line then
+        diagnostic.start = start
+        diagnostic.server = ls.name
+        table.insert(diagnostics_to_show, diagnostic)
+      end
     end
   end
 
-  local diagnostics_fmt = '%d:%d %s: %s\n'
+  local diagnostics_fmt = '%s: %d:%d %s:%s\n'
   local diagnostics_msg = ''
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
-                          string.format(diagnostics_fmt, diagnostic.start.line,
+                          string.format(diagnostics_fmt, diagnostic.server, diagnostic.start.line,
                                         diagnostic.start.col, diagnostic.code or 'diagnostic',
                                         diagnostic.message)
   end
@@ -1643,13 +1658,7 @@ vis:command_register('lspc-prev-diagnostic', function(argv, _, win)
 end)
 
 vis:command_register('lspc-show-diagnostics', function(argv, _, win)
-  local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
-  if err then
-    lspc_err(err)
-    return
-  end
-
-  err = lspc_show_diagnostic(ls, win, argv[2])
+  local err = lspc_show_diagnostic(win, argv[1])
   if err then
     lspc_err(err)
   end
