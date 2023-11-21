@@ -428,10 +428,6 @@ local function vis_open_doc_pos(doc_pos, cmd, win)
   end
 end
 
-lspc.open_file = function(win, path, line, col, cmd)
-  vis_open_doc_pos({file = path, line = line, col = col}, cmd or 'e', win)
-end
-
 -- Support jumping between document positions
 -- Stack of edited document positions
 local doc_pos_history = {}
@@ -449,6 +445,10 @@ local function vis_open_new_doc_pos(doc_pos, cmd, win)
   end
 
   vis_open_doc_pos(doc_pos, cmd, win)
+end
+
+lspc.open_file = function(win, path, line, col, cmd)
+  vis_open_new_doc_pos({file = path, line = line, col = col}, cmd or 'e', win)
 end
 
 local function vis_pop_doc_pos(win)
