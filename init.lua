@@ -1253,46 +1253,12 @@ end
 -- Initiate the shutdown of a language server
 -- Sending the exit notification and closing the file handle are done in
 -- the shutdown response handler.
-local function ls_shutdown_server(ls)
+local function ls_shutdown(ls)
   ls_call_method(ls, 'shutdown')
 end
 
-local function ls_start_server(syntax)
-  local ls_conf = lspc.ls_map[syntax]
-  if not ls_conf then
-    return nil, 'No language server available for ' .. syntax
-  end
-
-  local exe = ls_conf.cmd:gmatch('%S+')()
-  if not os.execute('type ' .. exe .. '>/dev/null 2>/dev/null') then
-    -- remove the configured language server
-    lspc.ls_map[syntax] = nil
-    local msg = string.format('Language server for %s configured but %s not found', syntax, exe)
-    -- the warning will be visual if the language server was automatically startet
-    -- if the user tried to start teh server manually they will see msg as error
-    lspc_warn(msg)
-    return nil, msg
-
-  end
-
-  if lspc.running[ls_conf.name] then
-    return nil, 'Already a language server running for ' .. syntax
-  end
-
-  local ls = {
-    name = ls_conf.name,
-    settings = ls_conf.settings,
-    formatting_options = ls_conf.formatting_options,
-    initialized = false,
-    id = 0,
-    inflight = {},
-    open_files = {},
-    parser = parser.Parser(),
-  }
-
-  ls.fd = vis:communicate(ls_conf.name, ls_conf.cmd)
-
-  lspc.running[ls_conf.name] = ls
+local function ls_start(ls, init_options)
+  ls.fd = vis:communicate(ls.name, ls.cmd)
 
   -- register the response handler
   vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, event, code, msg)
@@ -1326,11 +1292,61 @@ local function ls_start_server(syntax)
     capabilities = lspc.client_capabilites,
   }
 
-  if ls_conf.init_options then
-    params.initializationOptions = ls_conf.init_options
+  if init_options then
+    params.initializationOptions = init_options
   end
 
-  ls_call_method(ls, 'initialize', params)
+  ls:call_method('initialize', params)
+end
+
+local function new_ls(ls_conf)
+  local ls = {
+    name = ls_conf.name,
+    cmd = ls_conf.cmd,
+    settings = ls_conf.settings,
+    initialized_hook = ls_conf.initialized_hook,
+    file_open_hook = ls_conf.file_open_hook,
+    formatting_options = ls_conf.formatting_options,
+    initialized = false,
+    id = 0,
+    inflight = {},
+    open_files = {},
+    parser = parser.Parser(),
+
+    -- exported methods of a language server
+    send_notification = ls_send_notification,
+    send_did_change = ls_send_did_change,
+    call_method = ls_call_method,
+    shutdown = ls_shutdown,
+  }
+
+  return ls
+end
+
+local function lspc_start_server(syntax)
+  local ls_conf = lspc.ls_map[syntax]
+  if not ls_conf then
+    return nil, 'No language server available for ' .. syntax
+  end
+
+  local exe = ls_conf.cmd:gmatch('%S+')()
+  if not os.execute('type ' .. exe .. '>/dev/null 2>/dev/null') then
+    -- remove the configured language server
+    lspc.ls_map[syntax] = nil
+    local msg = string.format('Language server for %s configured but %s not found', syntax, exe)
+    -- the warning will be visual if the language server was automatically startet
+    -- if the user tried to start teh server manually they will see msg as error
+    lspc_warn(msg)
+    return nil, msg
+  end
+
+  if lspc.running[ls_conf.name] then
+    return nil, 'Already a language server running for ' .. syntax
+  end
+
+  local ls = new_ls(ls_conf)
+  lspc.running[ls_conf.name] = ls
+  ls_start(ls, ls_conf.init_options)
 
   return ls
 end
@@ -1631,7 +1647,7 @@ vis:command_register('lspc-start-server', function(argv, _, win)
     lspc_err('no language specified')
   end
 
-  local _, err = ls_start_server(syntax)
+  local _, err = lspc_start_server(syntax)
   if err then
     lspc_err(err)
   end
@@ -1644,7 +1660,7 @@ vis:command_register('lspc-shutdown-server', function(argv, _, win)
     return
   end
 
-  ls_shutdown_server(ls)
+  ls:shutdown()
 end)
 
 vis:command_register('lspc-close', function(_, _, win)
@@ -1692,7 +1708,7 @@ end)
 -- vis-lspc event hooks
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
-    ls_start_server(win.syntax)
+    lspc_start_server(win.syntax)
   end
 end)
 
