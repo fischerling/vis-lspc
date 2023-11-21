@@ -965,6 +965,11 @@ local function lspc_handle_initialize_response(ls, result)
   setmetatable(params, {__jsontype = 'object'})
   ls_send_notification(ls, 'initialized', params)
 
+  if ls.initialized_hook then
+    lspc.log('executing initialize hook of ' .. ls.name)
+    ls:initialized_hook()
+  end
+
   -- According to nvim-lspconfig sendig the lsp server settings shortly after
   -- initialization is a undocumented convention.
   -- See https://github.com/neovim/nvim-lspconfig/blob/ed88435764d8b00442e66d39ec3d9c360e560783/CONTRIBUTING.md
@@ -1248,6 +1253,10 @@ local function lspc_open(ls, win, file)
     end)
   end
 
+  if ls.file_open_hook then
+    lspc.log('Executing file_open_hook of' .. ls.name .. ' and ' .. file.path)
+    ls:file_open_hook(file)
+  end
 end
 
 -- Initiate the shutdown of a language server
