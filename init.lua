@@ -282,15 +282,102 @@ local function lspc_select(choices)
   return choice
 end
 
+--- Create an iterator yielding the nth line of a file
+--
+-- @param path The path to the file
+local function file_line_iterator_to_n(path)
+  local file = assert(io.open(path, 'r'))
+  local lines = file:lines()
+  local last_line = nil
+  local last_n = 1
+
+  return function(n)
+    if n == -1 then
+      file:close()
+      return nil
+    end
+
+    if n < last_n then
+      -- We might have multiple references on the same line, so we can
+      -- get called again with the previous line number
+      if (n + 1) == last_n then
+        return last_line
+      end
+
+      return nil
+    end
+
+    for line in lines do
+      if n == last_n then
+        last_n = last_n + 1
+        last_line = line
+
+        return line
+      end
+
+      last_n = last_n + 1
+    end
+
+    -- Iterator exhausted
+    return nil
+  end
+end
+
 local function lspc_select_location(locations)
-  local choices = {}
+  -- Collect all paths with a list of their locations so we
+  -- can sort the locations before calling file_line_iterator_to_n
+  local collected = {}
+
   for _, location in ipairs(locations) do
     local path = uri_to_path(location.uri or location.targetUri)
     local range = location.range or location.targetSelectionRange
     local position = lsp_pos_to_vis_sel(range.start)
-    local choice = path .. ':' .. position.line .. ':' .. position.col
-    table.insert(choices, choice)
-    choices[choice] = location
+
+    if collected[path] == nil then
+      table.insert(collected, path)
+      collected[path] = {}
+    end
+
+    table.insert(collected[path], {
+      ['location'] = location,
+      ['position'] = position,
+    })
+  end
+
+  local choices = {}
+
+  for _, path in ipairs(collected) do
+    -- Sort positions
+    table.sort(collected[path], function(a, b)
+      return a['position'].line < b['position'].line
+    end)
+
+    -- Use the already open file if present to get accurate line content for references
+    local line_iter
+    if lspc.open_files[path] ~= nil then
+      line_iter = function(n)
+        if n == -1 then
+          return nil
+        end
+
+        return lspc.open_files[path].file.lines[n]
+      end
+    else
+      line_iter = file_line_iterator_to_n(path)
+    end
+
+    for _, val in ipairs(collected[path]) do
+      local position = val['position']
+      local location = val['location']
+
+      local choice = path .. ':' .. position.line .. ':' .. position.col .. ':' ..
+                         line_iter(position.line)
+      table.insert(choices, choice)
+      choices[choice] = location
+    end
+
+    -- close the iterator
+    line_iter(-1)
   end
 
   -- select a location
