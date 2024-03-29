@@ -344,6 +344,7 @@ end
 local function _file_iterator_to_n(path)
   local file = io.open(path, "r")
   local lines = file:lines()
+  local last_line = nil
   local _n = 1
 
   return function(n)
@@ -353,12 +354,20 @@ local function _file_iterator_to_n(path)
     end
 
     if n < _n then
+      -- We might have multiple references on the same line, so we can
+      -- get called again with the previous line number
+      if (n + 1) == _n then
+        return last_line
+      end
+
       return nil
     end
 
     for line in lines do
       if n == _n then
         _n = _n + 1
+        last_line = line
+
         return line
       end
 
