@@ -348,15 +348,55 @@ local function lspc_select(choices)
   return choice
 end
 
+local function _file_iterator_to_n(path)
+  local file = io.open(path, "r")
+  local lines = file:lines()
+  local _n = 1
+
+  return function(n)
+    if n == -1 then
+      file:close()
+      return nil
+    end
+
+    if n < _n then
+      return nil
+    end
+
+    for line in lines do
+      if n == _n then
+        _n = _n + 1
+        return line
+      end
+
+      _n = _n + 1
+    end
+
+    -- Iterator exhausted
+    return nil
+  end
+end
+
 local function lspc_select_location(locations)
   local choices = {}
+  local files = {}
+
   for _, location in ipairs(locations) do
     local path = uri_to_path(location.uri or location.targetUri)
     local range = location.range or location.targetSelectionRange
     local position = lsp_pos_to_vis_sel(range.start)
-    local choice = path .. ':' .. position.line .. ':' .. position.col
+
+    if files[path] == nil then
+      files[path] = _file_iterator_to_n(path)
+    end
+
+    local choice = path .. ':' .. position.line .. ':' .. position.col .. ':' .. files[path](position.line)
     table.insert(choices, choice)
     choices[choice] = location
+  end
+
+  for _, iter in pairs(files) do
+    iter(-1)
   end
 
   -- select a location
