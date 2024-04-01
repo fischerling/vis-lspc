@@ -47,7 +47,7 @@ local lspc = {
 --
 --- ClientCapabilities we tell the language server when calling "initialize"
 --
-local supported_markup_kind = {'plaintext'}
+local supported_markup_kind = {'markdown'}
 
 local goto_methods_capabilities = {
   linkSupport = true,
@@ -61,14 +61,14 @@ local client_capabilites = {
   },
   textDocument = {
     synchronization = {dynamicRegistration = false, didSave = true},
-    -- ask the server to send us only plaintext completionItems
+    -- ask the server to send us only markdown completionItems
     completion = {
       dynamicRegistration = false,
       completionItem = {documentationFormat = supported_markup_kind},
     },
-    -- ask the server to send us only plaintext hover results
+    -- ask the server to send us only markdown hover results
     hover = {dynamicRegistration = false, contentFormat = supported_markup_kind},
-    -- ask the server to send us only plaintext signatureHelp results
+    -- ask the server to send us only markdown signatureHelp results
     signatureHelp = {
       dynamicRegistration = false,
       signatureInformation = {documentationFormat = supported_markup_kind},
