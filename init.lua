@@ -822,6 +822,14 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
   lspc_err('Unsupported completion')
 end
 
+local function _show_markdown_message(msg)
+  vis:command("open")
+  vis:command("set syntax markdown")
+
+  vis.win.file:insert(0, msg)
+  vis.win.selection.pos = 0
+end
+
 local function lspc_handle_hover_method_response(win, result, old_pos)
   if not result or not result.contents then
     lspc_warn('no hover available')
@@ -829,13 +837,14 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
   end
 
   local sel = vis_pos_to_sel(win, old_pos)
-  local hover_header =
-      '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' .. sel.col .. ' ---'
 
-  local hover_msg = ''
   -- result is MarkedString[]
   if type(result.contents) == 'table' and #result.contents > 0 then
     lspc.log('hover returned list of length ' .. #result.contents)
+
+    local hover_header = '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' .. sel.col .. ' ---'
+    local hover_msg = ''
+
     for i, v in ipairs(result.contents) do
       if i == 1 then
         hover_msg = v.value or v
@@ -843,11 +852,13 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
         hover_msg = hover_msg .. '\n---\n' .. (v.value or v)
       end
     end
+
+    vis:message(hover_header .. '\n' .. hover_msg)
     -- result is either MarkedString or MarkupContent
   else
-    hover_msg = result.contents.value or result.contents
+    _show_markdown_message(result.contents.value or result.contents)
   end
-  vis:message(hover_header .. '\n' .. hover_msg)
+
 end
 
 local function lspc_handle_signature_help_method_response(win, result, call_pos)
