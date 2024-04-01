@@ -1680,5 +1680,10 @@ vis:option_register('lspc-confirm-cmd', 'string', function(value)
   return true
 end, 'External tool vis-lspc uses to ask the user for confirmation')
 
+vis:option_register('lspc-message-level', 'number', function(value)
+  lspc.message_level = value
+  return true
+end, 'Message level to show in UI (for server messages)')
+
 dofile(source_path .. 'bindings.lua')
 return lspc
