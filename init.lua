@@ -376,24 +376,45 @@ local function _file_iterator_to_n(path)
 end
 
 local function lspc_select_location(locations)
-  local choices = {}
-  local files = {}
+  -- Collect all paths with a list of their locations so we
+  -- can sort the locations before calling _file_iterator_to_n
+  local collected = {}
 
   for _, location in ipairs(locations) do
     local path = uri_to_path(location.uri or location.targetUri)
     local range = location.range or location.targetSelectionRange
     local position = lsp_pos_to_vis_sel(range.start)
 
-    if files[path] == nil then
-      files[path] = _file_iterator_to_n(path)
+    if collected[path] == nil then
+      table.insert(collected, path)
+      collected[path] = {}
     end
 
-    local choice = path .. ':' .. position.line .. ':' .. position.col .. ':' .. files[path](position.line)
-    table.insert(choices, choice)
-    choices[choice] = location
+    table.insert(collected[path], {
+      ['location'] = location,
+      ['position'] = position
+    })
   end
 
-  for _, iter in pairs(files) do
+  local choices = {}
+
+  for _, path in ipairs(collected) do
+    -- Sort positions
+    table.sort(collected[path], function (a, b)
+      return a['position'].line < b['position'].line
+    end)
+
+    local iter = _file_iterator_to_n(path)
+
+    for _, val in ipairs(collected[path]) do
+      local position = val['position']
+      local location = val['location']
+
+      local choice = path .. ':' .. position.line .. ':' .. position.col .. ':' .. iter(position.line)
+      table.insert(choices, choice)
+      choices[choice] = location
+    end
+
     iter(-1)
   end
 
