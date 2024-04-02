@@ -321,11 +321,7 @@ local function lspc_select(choices)
     return choices[1]
   end
 
-  local status, output
-  local cmd = 'printf "' .. menu_input .. '" | ' .. lspc.menu_cmd
-  lspc.log('collect choice using: ' .. cmd)
-
-  status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+  local status, output = vis:pipe_buffer(menu_input, lspc.menu_cmd)
 
   local choice = nil
   if status == 0 then
@@ -414,20 +410,14 @@ end
 -- return true if user selected yes, false otherwise
 local function lspc_confirm(prompt)
   local choices = 'no\nyes'
-
-  local cmd = 'printf "' .. choices .. '" | ' .. lspc.confirm_cmd
+  local cmd = lspc.confirm_cmd
 
   if prompt then
     cmd = cmd .. ' -p \'' .. prompt .. '\''
   end
 
-  lspc.log('get confirmation using: ' .. cmd)
-  -- local menu = io.popen(cmd)
-  -- local output = menu:read('*a')
-  -- local _, _, status = menu:close()
-
   local choice = nil
-  local status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+  local status, output = vis:pipe_buffer(choices, cmd)
   if status == 0 then
     -- trim newline from selection
     if output:sub(-1) == '\n' then
