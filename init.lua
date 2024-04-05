@@ -282,6 +282,74 @@ local function lspc_select(choices)
   return choice
 end
 
+--- Split a path into its components
+-- @param path the path to split into components
+-- @return a table containing the path components
+local function split_path_into_components(path)
+  local components = {}
+
+  if #path == 1 then
+    return nil
+  end
+
+  -- Skip the initial '/'
+  local start_idx = 2
+
+  while true do
+    local slash = path:find('/', start_idx + 1)
+
+    if slash == nil then
+      table.insert(components, path:sub(start_idx, #path))
+      return components
+    else
+      table.insert(components, path:sub(start_idx, slash - 1))
+      start_idx = slash + 1
+    end
+  end
+end
+
+--- Get a path relative to the current working directory
+-- @param cwd_components Table of the path components of the CWD
+-- @param absolute_components table of the path components of the absolute path
+-- @return the relative path
+local function get_relative_path(cwd_components, absolute_components)
+  for idx = 1, #cwd_components do
+    local cwd = cwd_components[idx]
+    local absolute = absolute_components[idx]
+
+    if cwd ~= absolute then
+      local dir = ''
+
+      -- Atleast the first component must match for us to convert
+      -- it to a relative path
+      if idx ~= 1 then
+        for _ = idx, #cwd_components do
+          dir = dir .. '..' .. '/'
+        end
+
+        -- Skip trailing '/'
+        dir = dir:sub(1, #dir - 1)
+      end
+
+      for i = idx, #absolute_components do
+        dir = dir .. '/' .. absolute_components[i]
+      end
+
+      return dir
+    end
+  end
+
+  -- cwd shorter than absolute path
+  local dir = ''
+
+  for i = #cwd_components + 1, #absolute_components do
+    dir = dir .. '/' .. absolute_components[i]
+  end
+
+  -- Skip leading '/'
+  return dir:sub(2)
+end
+
 --- Create an iterator yielding the nth line of a file
 --
 -- @param path The path to the file
@@ -345,6 +413,9 @@ local function lspc_select_location(locations)
   end
 
   local choices = {}
+  local cwd_components = capture_cmd('pwd')
+  -- Strip trailing newline
+  cwd_components = split_path_into_components(cwd_components:sub(1, #cwd_components - 1))
 
   for _, path in ipairs(collected) do
     -- Sort positions
@@ -352,6 +423,7 @@ local function lspc_select_location(locations)
       return a['position'].line < b['position'].line
     end)
 
+    local rel_path = get_relative_path(cwd_components, split_path_into_components(path))
     -- Use the already open file if present to get accurate line content for references
     local line_iter
     if lspc.open_files[path] ~= nil then
@@ -370,7 +442,7 @@ local function lspc_select_location(locations)
       local position = val['position']
       local location = val['location']
 
-      local choice = path .. ':' .. position.line .. ':' .. position.col .. ':' ..
+      local choice = rel_path .. ':' .. position.line .. ':' .. position.col .. ':' ..
                          line_iter(position.line)
       table.insert(choices, choice)
       choices[choice] = location
