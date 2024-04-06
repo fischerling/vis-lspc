@@ -580,7 +580,17 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
     style = lspc.diagnostic_style_id
   end
 
+  local level_mapping = {
+      [1] = lspc.diagnostic_styles.error,
+      [2] = lspc.diagnostic_styles.warning,
+      [3] = lspc.diagnostic_styles.information,
+      [4] = lspc.diagnostic_styles.hint
+  }
+
   for _, diagnostic in ipairs(diagnostics) do
+    local diagnostic_style = level_mapping[diagnostic.severity] or level_mapping[1]
+    assert(win:style_define(lspc.diagnostic_style_id, diagnostic_style))
+
     if lspc.highlight_diagnostics == 'range' then
       local range = diagnostic.vis_range
 
@@ -1585,8 +1595,6 @@ vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
     ls_start_server(win.syntax)
   end
-
-  assert(win:style_define(lspc.diagnostic_style_id, lspc.diagnostic_style))
 end)
 
 vis.events.subscribe(vis.events.WIN_HIGHLIGHT, function(win)
@@ -1639,6 +1647,22 @@ vis:option_register('lspc-message-level', 'number', function(value)
   lspc.message_level = value
   return true
 end, 'Message level to show in UI (for server messages)')
+
+vis:option_register('lspc-diagnostic-style-error', 'string', function(value)
+  lspc.diagnostic_styles.error = value
+end, 'Style for diagnostic errors')
+
+vis:option_register('lspc-diagnostic-style-warning', 'string', function(value)
+  lspc.diagnostic_styles.warning = value
+end, 'Style for diagnostic warnings')
+
+vis:option_register('lspc-diagnostic-style-information', 'string', function(value)
+  lspc.diagnostic_styles.information = value
+end, 'Style for diagnostic information')
+
+vis:option_register('lspc-diagnostic-style-hint', 'string', function(value)
+  lspc.diagnostic_styles.hint = value
+end, 'Style for diagnostic hints')
 
 dofile(source_path .. 'bindings.lua')
 return lspc
