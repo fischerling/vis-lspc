@@ -47,6 +47,11 @@ local lspc = {
   -- message level to show in the UI when receiving messages from the server
   -- Error = 1, Warning = 2, Info = 3, Log = 4
   message_level = 3,
+
+  -- events
+  events = {
+    LS_INITIALIZED = 'LspcEvent::LS_INITIALIZED',
+  },
 }
 
 --
