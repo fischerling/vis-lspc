@@ -436,7 +436,7 @@ local function _file_iterator_to_n(path)
   end
 end
 
-local function lspc_select_location(locations)
+local function lspc_select_location(ls, locations)
   -- Collect all paths with a list of their locations so we
   -- can sort the locations before calling _file_iterator_to_n
   local collected = {}
@@ -471,7 +471,18 @@ local function lspc_select_location(locations)
     -- Convert absolute path to relative before calling the iterator helper
     -- to ensure that results are always validated
     local rel_path = _get_relative_path(cwd_components, _split_path_into_components(path))
-    local iter = _file_iterator_to_n(rel_path)
+    -- Use the already open file if present to get accurate line content for references
+    local iter =
+      ls.open_files[path] ~= nil and
+        function(n)
+          if n == -1 then
+            return nil
+          end
+
+          return ls.open_files[path].file.lines[n]
+        end
+      or
+        _file_iterator_to_n(rel_path)
 
     for _, val in ipairs(collected[path]) do
       local position = val['position']
@@ -784,7 +795,7 @@ local function ls_call_text_document_method(ls, method, params, win, ctx)
   ls_call_method(ls, 'textDocument/' .. method, params, win, ctx)
 end
 
-local function lspc_handle_goto_method_response(req, result)
+local function lspc_handle_goto_method_response(ls, req, result)
   if not result or next(result) == nil then
     lspc_warn(req.method .. ' found no results')
     return
@@ -793,7 +804,7 @@ local function lspc_handle_goto_method_response(req, result)
   local location
   -- result actually a list of results
   if type(result) == 'table' then
-    location = lspc_select_location(result)
+    location = lspc_select_location(ls, result)
     if not location then
       return
     end
@@ -1038,7 +1049,7 @@ local function ls_handle_method_response(ls, method_response, req)
      method == 'textDocument/implementation' or
      method == 'textDocument/references' then
     -- LuaFormatter on
-    lspc_handle_goto_method_response(req, result)
+    lspc_handle_goto_method_response(ls, req, result)
 
   elseif method == 'initialize' then
     lspc_handle_initialize_response(ls, result)
