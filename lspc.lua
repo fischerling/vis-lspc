@@ -56,6 +56,9 @@ local lspc = {
   -- How to present messages to the user.
   -- 'message': use vis:message; 'open': use a new split window allowing for syntax highlighting
   show_message = 'message',
+
+  -- events
+  events = {LS_INITIALIZED = 'LspcEvent::LS_INITIALIZED'},
 }
 
 --

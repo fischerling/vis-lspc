@@ -978,6 +978,8 @@ local function lspc_handle_initialize_response(ls, result)
       settings = ls.settings,
     })
   end
+
+  vis.events.emit(lspc.events.LS_INITIALIZED, ls)
 end
 
 -- method response dispatcher
@@ -1754,6 +1756,29 @@ vis.events.subscribe(vis.events.FILE_OPEN, function(file)
   end
 
   lspc_open(ls, win, file)
+end)
+
+vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
+  if not vis.win or vis.win.file ~= file then
+    return
+  end
+
+  local ls = lspc_get_usable_ls(vis.win.syntax)
+  if not ls then
+    return
+  end
+
+  if not ls.open_files[path] then
+    lspc_open(ls, vis.win, file)
+  end
+
+  ls_send_did_change(ls, file)
+end)
+
+vis.events.subscribe(lspc.events.LS_INITIALIZED, function(ls)
+  if vis.win and vis.win.file and lspc_get_usable_ls(vis.win.syntax) == ls then
+    lspc_open(ls, vis.win, vis.win.file)
+  end
 end)
 
 vis:option_register('lspc-highlight-diagnostics', 'string', function(value)
