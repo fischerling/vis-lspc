@@ -1754,6 +1754,23 @@ vis.events.subscribe(vis.events.FILE_OPEN, function(file)
   lspc_open(ls, win, file)
 end)
 
+vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
+  if not vis.win or vis.win.file ~= file then
+    return
+  end
+
+  local ls = lspc_get_usable_ls(vis.win.syntax)
+  if not ls then
+    return
+  end
+
+  if not ls.open_files[path] then
+    lspc_open(ls, vis.win, file)
+  end
+
+  ls_send_did_change(ls, file)
+end)
+
 vis:option_register('lspc-highlight-diagnostics', 'string', function(value)
   lspc.highlight_diagnostics = value
   return true
