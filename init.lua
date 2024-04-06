@@ -501,6 +501,13 @@ local function vis_apply_textEdits(win, file, textEdits)
   win:draw()
 end
 
+local function _show_message(msg)
+  vis:command("open")
+
+  vis.win.file:insert(0, msg)
+  vis.win.selection.pos = 0
+end
+
 -- apply a WorkspaceEdit received from the language server
 local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   local file_edits = workspaceEdit.changes
@@ -527,7 +534,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     end
   end
 
-  vis:message(summary)
+  _show_message(summary)
   vis:redraw()
 
   -- get user confirmation
@@ -842,7 +849,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
   if type(result.contents) == 'table' and #result.contents > 0 then
     lspc.log('hover returned list of length ' .. #result.contents)
 
-    local hover_header = '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' .. sel.col .. ' ---'
+    local hover_header = '--- hover: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' .. sel.col .. ' ---'
     local hover_msg = ''
 
     for i, v in ipairs(result.contents) do
@@ -853,7 +860,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
       end
     end
 
-    vis:message(hover_header .. '\n' .. hover_msg)
+    _show_message(hover_header .. '\n' .. hover_msg)
     -- result is either MarkedString or MarkupContent
   else
     _show_markdown_message(result.contents.value or result.contents)
@@ -870,7 +877,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
   local signatures = result.signatures
 
   local sel = vis_pos_to_sel(win, call_pos)
-  local help_header = '--- signature help: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
+  local help_header = '--- signature help: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' ..
                           sel.col .. ' ---'
 
   -- local help_msg = json.encode(result)
@@ -883,7 +890,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
     end
     help_msg = help_msg .. '\n' .. sig_msg
   end
-  vis:message(help_header .. help_msg)
+  _show_message(help_header .. help_msg)
 end
 
 local function lspc_handle_rename_method_response(win, result)
@@ -1381,7 +1388,7 @@ local function lspc_show_diagnostic(ls, win, line)
     end
   end
 
-  local diagnostics_fmt = '%d:%d %s:%s\n'
+  local diagnostics_fmt = '%d:%d %s: %s\n'
   local diagnostics_msg = ''
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
@@ -1391,7 +1398,7 @@ local function lspc_show_diagnostic(ls, win, line)
   end
 
   if diagnostics_msg ~= '' then
-    vis:message(diagnostics_msg)
+    _show_message(diagnostics_msg)
   else
     lspc_warn('No diagnostics available for line: ' .. line)
   end
