@@ -167,10 +167,13 @@ end
 
 -- mapping function between vis lexer names and LSP languageIds
 local function syntax_to_languageId(syntax)
-  if syntax == 'ansi_c' then
-    return 'c'
-  end
-  return syntax
+  local map = {
+    ansi_c = 'c',
+    javascript = 'jsx',
+    typescript = 'tsx',
+  }
+
+  return map[syntax] or syntax
 end
 
 -- map of known language servers per syntax
