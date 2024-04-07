@@ -1228,6 +1228,27 @@ local function ls_shutdown(ls)
   ls:call_method('shutdown')
 end
 
+local function get_root_path(ls, file_path)
+  local globs = ''
+
+  if ls.roots then
+    for _, glob in ipairs(ls.roots) do
+      globs = globs .. glob .. '\n'
+    end
+  end
+
+  globs = globs .. '.git\n.hg\n'
+
+  local status, out = vis:pipe(globs, source_path .. '/tools/find-root "' .. file_path .. '"')
+
+  if status ~= 0 then
+    return nil
+  end
+
+  -- Skip trailing newline
+  return out:sub(1, #out - 1)
+end
+
 local function ls_start(ls, init_options)
   ls.fd = vis:communicate(ls.name, 'exec ' .. ls.cmd)
 
@@ -1259,7 +1280,7 @@ local function ls_start(ls, init_options)
   local params = {
     processId = vis_pid,
     clientInfo = {name = lspc.name, version = lspc.version},
-    rootUri = lspc.json.null,
+    rootUri = (vis.win.file and path_to_uri(get_root_path(ls, vis.win.file.path))) or lspc.json.null,
     capabilities = lspc.client_capabilites,
   }
 
@@ -1281,6 +1302,7 @@ local function new_ls(ls_conf)
     inflight = {},
     parser = parser.new(),
     capabilities = {},
+    roots = ls_conf.roots,
 
     -- exported methods of a language server
     send_notification = ls_send_notification,
