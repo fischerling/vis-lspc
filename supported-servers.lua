@@ -20,10 +20,15 @@ local source_path = source_str:match('(.*/)')
 
 local lspc = dofile(source_path .. 'lspc.lua')
 
-local clangd = {name = 'clangd', cmd = 'clangd'}
+local clangd = {
+  name = 'clangd',
+  cmd = 'clangd',
+  roots = {'compile_commands.json', '.clangd'},
+}
 local typescript = {
   name = 'typescript',
   cmd = 'typescript-language-server --stdio',
+  roots = {'package.json', 'tsconfig.json', 'jsconfig.json'},
 }
 
 return {
@@ -32,7 +37,11 @@ return {
   ansi_c = clangd,
   -- pylsp (python-lsp-server) language server configuration
   -- https://github.com/python-lsp/python-lsp-server
-  python = {name = 'python-lsp-server', cmd = 'pylsp'},
+  python = {
+    name = 'python-lsp-server',
+    cmd = 'pylsp',
+    roots = {'requirements.txt', 'setup.py'},
+  },
   -- lua (lua-language-server) language server configuration
   -- https://github.com/sumneko/lua-language-server
   lua = {
@@ -51,18 +60,35 @@ return {
   dart = {
     name = 'dart',
     cmd = 'dart language-server --client-id vis-lspc --client-version ' .. lspc.version,
+    roots = {'pubspec.yaml'},
   },
   -- haskell (haskell-language-server)
   -- https://github.com/haskell/haskell-language-server
-  haskell = {name = 'haskell', cmd = 'haskell-language-server-wrapper --lsp'},
+  haskell = {
+    name = 'haskell',
+    cmd = 'haskell-language-server-wrapper --lsp',
+    roots = {'hie.yaml', 'cabal.project', 'Setup.hs', 'stack.yaml', '*.cabal'},
+  },
 
   -- ocaml (ocaml-language-server)
   -- https://github.com/ocaml/ocaml-lsp
-  caml = {name = 'ocaml', cmd = 'ocamllsp'},
+  caml = {
+    name = 'ocaml',
+    cmd = 'ocamllsp',
+    roots = {
+      'dune-workspace',
+      'dune-project',
+      'Makefile',
+      'opam',
+      '*.opam',
+      'esy.json',
+      'dune',
+    },
+  },
 
   -- go (gopls)
   -- https://github.com/golang/tools/tree/master/gopls
-  go = {name = 'go', cmd = 'gopls'},
+  go = {name = 'go', cmd = 'gopls', roots = {'Gopkg.toml', 'go.mod'}},
 
   -- bash (bash-language-server)
   -- https://github.com/bash-lsp/bash-language-server
@@ -88,4 +114,8 @@ return {
     name = 'json-language-server',
     cmd = 'vscode-json-language-server --stdio',
   },
+
+  -- rust (rust-analyzer)
+  -- https://github.com/rust-lang/rust-analyzer
+  rust = {name = 'rust', cmd = 'rust-analyzer', roots = {'Cargo.toml'}},
 }
