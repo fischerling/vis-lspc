@@ -35,19 +35,29 @@ local lspc = {
   highlight_diagnostics = false,
   -- style id used by lspc to register the style used to highlight diagnostics
   diagnostic_style_id = 64, -- 64 is the last style id available for the lexer styles. See vis/ui.h.
-  -- style used by lspc to highlight the diagnostic range
-  -- 60% solarized red
-  diagnostic_style = 'back:#e3514f',
+  -- styles used by lspc to highlight the diagnostic range
+  -- must be set by the user
+  diagnostic_styles = {
+    error = 'fore:default,back:default',
+    warning = 'fore:default,back:default',
+    information = 'fore:default,back:default',
+    hint = 'fore:default,back:default',
+  },
 
   -- message level to show in the UI when receiving messages from the server
   -- Error = 1, Warning = 2, Info = 3, Log = 4
   message_level = 3,
+
+  -- events
+  events = {
+    LS_INITIALIZED = 'LspcEvent::LS_INITIALIZED',
+  },
 }
 
 --
 --- ClientCapabilities we tell the language server when calling "initialize"
 --
-local supported_markup_kind = {'plaintext'}
+local supported_markup_kind = {'markdown'}
 
 local goto_methods_capabilities = {
   linkSupport = true,
@@ -61,14 +71,14 @@ local client_capabilites = {
   },
   textDocument = {
     synchronization = {dynamicRegistration = false, didSave = true},
-    -- ask the server to send us only plaintext completionItems
+    -- ask the server to send us only markdown completionItems
     completion = {
       dynamicRegistration = false,
       completionItem = {documentationFormat = supported_markup_kind},
     },
-    -- ask the server to send us only plaintext hover results
+    -- ask the server to send us only markdown hover results
     hover = {dynamicRegistration = false, contentFormat = supported_markup_kind},
-    -- ask the server to send us only plaintext signatureHelp results
+    -- ask the server to send us only markdown signatureHelp results
     signatureHelp = {
       dynamicRegistration = false,
       signatureInformation = {documentationFormat = supported_markup_kind},

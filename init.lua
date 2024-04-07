@@ -321,18 +321,7 @@ local function lspc_select(choices)
     return choices[1]
   end
 
-  local status, output
-  local cmd = 'printf "' .. menu_input .. '" | ' .. lspc.menu_cmd
-  lspc.log('collect choice using: ' .. cmd)
-
-  if lspc.menu_cmd:sub(0, 8) == 'vis-menu' then
-    status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
-  else
-    local menu = io.popen(cmd)
-    output = menu:read('*a')
-    local _, _, _status = menu:close()
-    status = _status
-  end
+  local status, output = vis:pipe_buffer(menu_input, lspc.menu_cmd)
 
   local choice = nil
   if status == 0 then
@@ -348,15 +337,163 @@ local function lspc_select(choices)
   return choice
 end
 
-local function lspc_select_location(locations)
-  local choices = {}
+local function _split_path_into_components(path)
+    local components = {}
+
+    if #path == 1 then
+        return nil
+    end
+
+    -- Skip the initial '/'
+    local start_idx = 2
+
+    while true do
+        local slash = path:find('/', start_idx + 1)
+
+        if slash == nil then
+            table.insert(components, path:sub(start_idx, #path))
+            return components
+        else
+            table.insert(components, path:sub(start_idx, slash - 1))
+            start_idx = slash + 1
+        end
+    end
+end
+
+local function _get_relative_path(cwd_components, absolute_components)
+    for idx = 1, #cwd_components do
+        local cwd = cwd_components[idx]
+        local absolute = absolute_components[idx]
+
+        if cwd ~= absolute then
+            local dir = ''
+
+            -- Atleast the first component must match for us to convert
+            -- it to a relative path
+            if idx ~= 1 then
+                for i = idx, #cwd_components do
+                    dir = dir .. '..' .. '/'
+                end
+
+                -- Skip trailing '/'
+                dir = dir:sub(1, #dir - 1)
+            end
+
+            for i = idx, #absolute_components do
+                dir = dir .. '/' .. absolute_components[i]
+            end
+
+            return dir
+        end
+    end
+
+    -- cwd shorter than absolute path
+    local dir = ''
+
+    for i = #cwd_components + 1, #absolute_components do
+        dir = dir .. '/' .. absolute_components[i]
+    end
+
+    -- Skip leading '/'
+    return dir:sub(2)
+end
+
+local function _file_iterator_to_n(path)
+  local file = io.open(path, "r")
+  local lines = file:lines()
+  local last_line = nil
+  local _n = 1
+
+  return function(n)
+    if n == -1 then
+      file:close()
+      return nil
+    end
+
+    if n < _n then
+      -- We might have multiple references on the same line, so we can
+      -- get called again with the previous line number
+      if (n + 1) == _n then
+        return last_line
+      end
+
+      return nil
+    end
+
+    for line in lines do
+      if n == _n then
+        _n = _n + 1
+        last_line = line
+
+        return line
+      end
+
+      _n = _n + 1
+    end
+
+    -- Iterator exhausted
+    return nil
+  end
+end
+
+local function lspc_select_location(ls, locations)
+  -- Collect all paths with a list of their locations so we
+  -- can sort the locations before calling _file_iterator_to_n
+  local collected = {}
+
   for _, location in ipairs(locations) do
     local path = uri_to_path(location.uri or location.targetUri)
     local range = location.range or location.targetSelectionRange
     local position = lsp_pos_to_vis_sel(range.start)
-    local choice = path .. ':' .. position.line .. ':' .. position.col
-    table.insert(choices, choice)
-    choices[choice] = location
+
+    if collected[path] == nil then
+      table.insert(collected, path)
+      collected[path] = {}
+    end
+
+    table.insert(collected[path], {
+      ['location'] = location,
+      ['position'] = position
+    })
+  end
+
+  local choices = {}
+  local cwd_components = capture_cmd('pwd')
+  -- Strip trailing newline
+  local cwd_components = _split_path_into_components(cwd_components:sub(1, #cwd_components - 1))
+
+  for _, path in ipairs(collected) do
+    -- Sort positions
+    table.sort(collected[path], function (a, b)
+      return a['position'].line < b['position'].line
+    end)
+
+    -- Convert absolute path to relative before calling the iterator helper
+    -- to ensure that results are always validated
+    local rel_path = _get_relative_path(cwd_components, _split_path_into_components(path))
+    -- Use the already open file if present to get accurate line content for references
+    local iter =
+      ls.open_files[path] ~= nil and
+        function(n)
+          if n == -1 then
+            return nil
+          end
+
+          return ls.open_files[path].file.lines[n]
+        end
+      or
+        _file_iterator_to_n(rel_path)
+
+    for _, val in ipairs(collected[path]) do
+      local position = val['position']
+      local location = val['location']
+
+      local choice = rel_path .. ':' .. position.line .. ':' .. position.col .. ':' .. iter(position.line)
+      table.insert(choices, choice)
+      choices[choice] = location
+    end
+
+    iter(-1)
   end
 
   -- select a location
@@ -372,20 +509,14 @@ end
 -- return true if user selected yes, false otherwise
 local function lspc_confirm(prompt)
   local choices = 'no\nyes'
-
-  local cmd = 'printf "' .. choices .. '" | ' .. lspc.confirm_cmd
+  local cmd = lspc.confirm_cmd
 
   if prompt then
     cmd = cmd .. ' -p \'' .. prompt .. '\''
   end
 
-  lspc.log('get confirmation using: ' .. cmd)
-  -- local menu = io.popen(cmd)
-  -- local output = menu:read('*a')
-  -- local _, _, status = menu:close()
-
   local choice = nil
-  local status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+  local status, output = vis:pipe_buffer(choices, cmd)
   if status == 0 then
     -- trim newline from selection
     if output:sub(-1) == '\n' then
@@ -496,6 +627,13 @@ local function vis_apply_textEdits(win, file, textEdits)
   win:draw()
 end
 
+local function _show_message(msg)
+  vis:command("open")
+
+  vis.win.file:insert(0, msg)
+  vis.win.selection.pos = 0
+end
+
 -- apply a WorkspaceEdit received from the language server
 local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   local file_edits = workspaceEdit.changes
@@ -522,7 +660,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     end
   end
 
-  vis:message(summary)
+  _show_message(summary)
   vis:redraw()
 
   -- get user confirmation
@@ -572,7 +710,17 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
     style = lspc.diagnostic_style_id
   end
 
+  local level_mapping = {
+      [1] = lspc.diagnostic_styles.error,
+      [2] = lspc.diagnostic_styles.warning,
+      [3] = lspc.diagnostic_styles.information,
+      [4] = lspc.diagnostic_styles.hint
+  }
+
   for _, diagnostic in ipairs(diagnostics) do
+    local diagnostic_style = level_mapping[diagnostic.severity] or level_mapping[1]
+    assert(win:style_define(lspc.diagnostic_style_id, diagnostic_style))
+
     if lspc.highlight_diagnostics == 'range' then
       local range = diagnostic.vis_range
 
@@ -664,7 +812,7 @@ local function ls_call_text_document_method(ls, method, params, win, ctx)
   ls_call_method(ls, 'textDocument/' .. method, params, win, ctx)
 end
 
-local function lspc_handle_goto_method_response(req, result)
+local function lspc_handle_goto_method_response(ls, req, result)
   if not result or next(result) == nil then
     lspc_warn(req.method .. ' found no results')
     return
@@ -673,7 +821,7 @@ local function lspc_handle_goto_method_response(req, result)
   local location
   -- result actually a list of results
   if type(result) == 'table' then
-    location = lspc_select_location(result)
+    location = lspc_select_location(ls, result)
     if not location then
       return
     end
@@ -799,6 +947,14 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
   lspc_err('Unsupported completion')
 end
 
+local function _show_markdown_message(msg)
+  vis:command("open")
+  vis:command("set syntax markdown")
+
+  vis.win.file:insert(0, msg)
+  vis.win.selection.pos = 0
+end
+
 local function lspc_handle_hover_method_response(win, result, old_pos)
   if not result or not result.contents then
     lspc_warn('no hover available')
@@ -806,13 +962,14 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
   end
 
   local sel = vis_pos_to_sel(win, old_pos)
-  local hover_header =
-      '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' .. sel.col .. ' ---'
 
-  local hover_msg = ''
   -- result is MarkedString[]
   if type(result.contents) == 'table' and #result.contents > 0 then
     lspc.log('hover returned list of length ' .. #result.contents)
+
+    local hover_header = '--- hover: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' .. sel.col .. ' ---'
+    local hover_msg = ''
+
     for i, v in ipairs(result.contents) do
       if i == 1 then
         hover_msg = v.value or v
@@ -820,11 +977,13 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
         hover_msg = hover_msg .. '\n---\n' .. (v.value or v)
       end
     end
+
+    _show_message(hover_header .. '\n' .. hover_msg)
     -- result is either MarkedString or MarkupContent
   else
-    hover_msg = result.contents.value or result.contents
+    _show_markdown_message(result.contents.value or result.contents)
   end
-  vis:message(hover_header .. '\n' .. hover_msg)
+
 end
 
 local function lspc_handle_signature_help_method_response(win, result, call_pos)
@@ -836,7 +995,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
   local signatures = result.signatures
 
   local sel = vis_pos_to_sel(win, call_pos)
-  local help_header = '--- signature help: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
+  local help_header = '--- signature help: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' ..
                           sel.col .. ' ---'
 
   -- local help_msg = json.encode(result)
@@ -849,7 +1008,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
     end
     help_msg = help_msg .. '\n' .. sig_msg
   end
-  vis:message(help_header .. help_msg)
+  _show_message(help_header .. help_msg)
 end
 
 local function lspc_handle_rename_method_response(win, result)
@@ -881,6 +1040,8 @@ local function lspc_handle_initialize_response(ls, result)
       settings = ls.settings,
     })
   end
+
+  vis.events.emit(lspc.events.LS_INITIALIZED, ls)
 end
 
 -- method response dispatcher
@@ -907,7 +1068,7 @@ local function ls_handle_method_response(ls, method_response, req)
      method == 'textDocument/implementation' or
      method == 'textDocument/references' then
     -- LuaFormatter on
-    lspc_handle_goto_method_response(req, result)
+    lspc_handle_goto_method_response(ls, req, result)
 
   elseif method == 'initialize' then
     lspc_handle_initialize_response(ls, result)
@@ -1347,7 +1508,7 @@ local function lspc_show_diagnostic(ls, win, line)
     end
   end
 
-  local diagnostics_fmt = '%d:%d %s:%s\n'
+  local diagnostics_fmt = '%d:%d %s: %s\n'
   local diagnostics_msg = ''
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
@@ -1357,7 +1518,7 @@ local function lspc_show_diagnostic(ls, win, line)
   end
 
   if diagnostics_msg ~= '' then
-    vis:message(diagnostics_msg)
+    _show_message(diagnostics_msg)
   else
     lspc_warn('No diagnostics available for line: ' .. line)
   end
@@ -1577,8 +1738,6 @@ vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
     ls_start_server(win.syntax)
   end
-
-  assert(win:style_define(lspc.diagnostic_style_id, lspc.diagnostic_style))
 end)
 
 vis.events.subscribe(vis.events.WIN_HIGHLIGHT, function(win)
@@ -1612,6 +1771,29 @@ vis.events.subscribe(vis.events.FILE_OPEN, function(file)
   lspc_open(ls, win, file)
 end)
 
+vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
+  if not vis.win or vis.win.file ~= file then
+    return
+  end
+
+  local ls = lspc_get_usable_ls(vis.win.syntax)
+  if not ls then
+    return
+  end
+
+  if not ls.open_files[path] then
+    lspc_open(ls, vis.win, file)
+  end
+
+  ls_send_did_change(ls, file)
+end)
+
+vis.events.subscribe(lspc.events.LS_INITIALIZED, function(ls)
+  if vis.win and vis.win.file and lspc_get_usable_ls(vis.win.syntax) == ls then
+    lspc_open(ls, vis.win, vis.win.file)
+  end
+end)
+
 vis:option_register('lspc-highlight-diagnostics', 'string', function(value)
   lspc.highlight_diagnostics = value
   return true
@@ -1626,6 +1808,27 @@ vis:option_register('lspc-confirm-cmd', 'string', function(value)
   lspc.confirm_cmd = value
   return true
 end, 'External tool vis-lspc uses to ask the user for confirmation')
+
+vis:option_register('lspc-message-level', 'number', function(value)
+  lspc.message_level = value
+  return true
+end, 'Message level to show in UI (for server messages)')
+
+vis:option_register('lspc-diagnostic-style-error', 'string', function(value)
+  lspc.diagnostic_styles.error = value
+end, 'Style for diagnostic errors')
+
+vis:option_register('lspc-diagnostic-style-warning', 'string', function(value)
+  lspc.diagnostic_styles.warning = value
+end, 'Style for diagnostic warnings')
+
+vis:option_register('lspc-diagnostic-style-information', 'string', function(value)
+  lspc.diagnostic_styles.information = value
+end, 'Style for diagnostic information')
+
+vis:option_register('lspc-diagnostic-style-hint', 'string', function(value)
+  lspc.diagnostic_styles.hint = value
+end, 'Style for diagnostic hints')
 
 dofile(source_path .. 'bindings.lua')
 return lspc

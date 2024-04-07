@@ -58,4 +58,12 @@ return {
   -- ocaml (ocaml-language-server)
   -- https://github.com/ocaml/ocaml-lsp
   caml = {name = 'ocaml', cmd = 'ocamllsp'},
+
+  -- go (gopls)
+  -- https://github.com/golang/tools/tree/master/gopls
+  go = {name = 'go', cmd = 'gopls'},
+
+  -- rust (rust-analyzer)
+  -- https://github.com/rust-lang/rust-analyzer
+  rust = {name = 'rust', cmd = 'rust-analyzer'}
 }
