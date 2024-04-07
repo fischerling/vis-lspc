@@ -85,6 +85,7 @@ local client_capabilites = {
     },
     declaration = {dynamicRegistration = false, linkSupport = true},
     definition = goto_methods_capabilities,
+    publishDiagnostics = {relatedInformation = false},
     typeDefinition = goto_methods_capabilities,
     implementation = goto_methods_capabilities,
     references = {dynamicRegistration = false},
