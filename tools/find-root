@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -eu
+
+if [ ! "${1:-}" ]; then
+    exit 1
+fi
+
+BASEDIR="$(dirname "$1")"
+
+while read -r glob; do
+    cd "$BASEDIR"
+
+    while [ "$PWD" != "/" ]; do
+        set -- $glob
+
+        if [ -e "$1" ]; then
+            echo "$PWD"
+            exit 0
+        fi
+
+        cd ..
+    done
+done
+
+echo "$BASEDIR"

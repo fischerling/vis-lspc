@@ -1317,6 +1317,27 @@ local function ls_shutdown_server(ls)
   ls_call_method(ls, 'shutdown')
 end
 
+local function _get_root_path(ls_conf, file_path)
+  local globs = ''
+
+  if ls_conf.roots then
+    for _, glob in ipairs(ls_conf.roots) do
+      globs = globs .. glob .. '\n'
+    end
+  end
+
+  globs = globs .. '.git\n.hg\n'
+
+  local status, out = vis:pipe_buffer(globs, source_path .. '/tools/find-root "' .. file_path .. '"')
+
+  if status ~= 0 then
+    return nil
+  end
+
+  -- Skip trailing newline
+  return out:sub(1, #out - 1)
+end
+
 local function ls_start_server(syntax)
   local ls_conf = lspc.ls_map[syntax]
   if not ls_conf then
@@ -1382,7 +1403,7 @@ local function ls_start_server(syntax)
   local params = {
     processId = vis_pid,
     clientInfo = {name = lspc.name, version = lspc.version},
-    rootUri = json.null,
+    rootUri = vis.win.file and path_to_uri(_get_root_path(ls_conf, vis.win.file.path)),
     capabilities = lspc.client_capabilites,
   }
 
