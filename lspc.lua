@@ -39,6 +39,9 @@ local lspc = {
   -- 60% solarized red
   diagnostic_style = 'back:#e3514f',
 
+  -- restore the position of the primary curser after applying a workspace edit
+  workspace_edit_remember_cursor = true,
+
   -- message level to show in the UI when receiving messages from the server
   -- Error = 1, Warning = 2, Info = 3, Log = 4
   message_level = 3,

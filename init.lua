@@ -548,7 +548,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
       end
     end
 
-    -- It is not open currently -> open it
+    -- The file is not currently opened -> open it
     local opened
     if not win_with_file then
       vis_open_file(path, 'o')
@@ -556,8 +556,16 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
       opened = true
     end
 
+    -- Remember the current primary cursor position
+    local old_pos = win_with_file.selection.pos
+
     for _, edit in ipairs(edits) do
       vis_apply_textEdit(win_with_file, win_with_file.file, edit)
+    end
+
+    -- Restore the remembered primary cursor position
+    if lspc.workspace_edit_remember_cursor then
+      win_with_file.selection.pos = old_pos
     end
 
     -- save changes and close the opened window
