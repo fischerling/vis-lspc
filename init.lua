@@ -581,10 +581,10 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
   end
 
   local level_mapping = {
-      [1] = lspc.diagnostic_styles.error,
-      [2] = lspc.diagnostic_styles.warning,
-      [3] = lspc.diagnostic_styles.information,
-      [4] = lspc.diagnostic_styles.hint
+    [1] = lspc.diagnostic_styles.error,
+    [2] = lspc.diagnostic_styles.warning,
+    [3] = lspc.diagnostic_styles.information,
+    [4] = lspc.diagnostic_styles.hint,
   }
 
   for _, diagnostic in ipairs(diagnostics) do
