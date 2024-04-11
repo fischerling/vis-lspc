@@ -136,8 +136,16 @@ Available options are:
 * `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
 * `ls_map` - a table mapping `vis` syntax names to language server configurations
 * `highlight_diagnostics = 'line'` - highlight the `range` or `line`number of available diagnostics
-* `diagnostic_style = 'back:#e3514f'` - style used to highlight diagnostics
 * `workspace_edit_remember_cursor = true` - restore the primary cursor position after a workspaceEdit
+* ```
+diagnostic_styles = {
+  error = 'back:red',
+  warning = 'back:yellow',
+  information = 'back:yellow',
+  hint = 'back:yellow',
+}
+```lua
+  styles used to highlight different diagnostics
 
 #### Configure your own Language Server
 

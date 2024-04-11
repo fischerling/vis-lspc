@@ -38,10 +38,10 @@ local lspc = {
   -- styles used by lspc to highlight the diagnostic range
   -- must be set by the user
   diagnostic_styles = {
-    error = 'fore:default,back:default',
-    warning = 'fore:default,back:default',
-    information = 'fore:default,back:default',
-    hint = 'fore:default,back:default',
+    error = 'back:red',
+    warning = 'back:yellow',
+    information = 'back:yellow',
+    hint = 'back:yellow',
   },
 
   -- restore the position of the primary curser after applying a workspace edit
