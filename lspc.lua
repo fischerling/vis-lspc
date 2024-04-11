@@ -32,7 +32,7 @@ local lspc = {
   confirm_cmd = 'vis-menu',
 
   -- should diagnostics be highlighted if available
-  highlight_diagnostics = false,
+  highlight_diagnostics = 'line',
   -- style id used by lspc to register the style used to highlight diagnostics
   diagnostic_style_id = 64, -- 64 is the last style id available for the lexer styles. See vis/ui.h.
   -- styles used by lspc to highlight the diagnostic range
