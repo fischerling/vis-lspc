@@ -167,11 +167,13 @@ end
 
 -- mapping function between vis lexer names and LSP languageIds
 local function syntax_to_languageId(syntax)
+  -- LuaFormatter off
   local map = {
     ansi_c = 'c',
     javascript = 'jsx',
     typescript = 'tsx',
   }
+  -- LuaFormatter on
 
   return map[syntax] or syntax
 end
