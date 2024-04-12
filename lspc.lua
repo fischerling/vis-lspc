@@ -50,6 +50,10 @@ local lspc = {
   -- message level to show in the UI when receiving messages from the server
   -- Error = 1, Warning = 2, Info = 3, Log = 4
   message_level = 3,
+
+  -- How to present messages to the user.
+  -- 'message': use vis:message; 'open': use a new split window allowing for syntax highlighting
+  show_message = 'message',
 }
 
 --

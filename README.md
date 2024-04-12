@@ -138,6 +138,8 @@ Available options are:
 * `highlight_diagnostics = 'line'` - highlight the `range` or `line`number of available diagnostics
 * `workspace_edit_remember_cursor = true` - restore the primary cursor position after a workspaceEdit
 * `diagnostic_styles = { error = 'back:red', warning = 'back:yellow', information = 'back:yellow', hint = 'back:yellow', }` - styles used to highlight different diagnostics
+* `show_message = 'message'` - how to present information. `'message'`: use `vis:message`; `'open'`: use a new window supporting syntax highlighting.
+* `message_level = 3` - the level of shown messages retrieved via `window/showMessage` notifications
 
 #### Configure your own Language Server
 
