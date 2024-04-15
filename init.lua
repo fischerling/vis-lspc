@@ -501,6 +501,23 @@ local function vis_apply_textEdits(win, file, textEdits)
   win:draw()
 end
 
+local function lspc_show_message(msg, hdr, syntax)
+  if lspc.show_message == 'message' then
+    vis:message((hdr or '') .. msg)
+
+  elseif lspc.show_message == 'open' then
+    vis:command('open')
+    if syntax then
+      vis:command('set syntax ' .. syntax)
+    end
+
+    vis.win.file:insert(0, msg)
+    vis.win.selection.pos = 0
+  else
+    lspc_err('invalid message configuration "' .. lspc.show_message .. '".')
+  end
+end
+
 -- apply a WorkspaceEdit received from the language server
 local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   local file_edits = workspaceEdit.changes
@@ -527,7 +544,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     end
   end
 
-  vis:message(summary)
+  lspc_show_message(summary)
   vis:redraw()
 
   -- get user confirmation
@@ -829,25 +846,31 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
   end
 
   local sel = vis_pos_to_sel(win, old_pos)
-  local hover_header =
-      '--- hover: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' .. sel.col .. ' ---'
 
+  local hover_header =
+      '--- hover: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' .. sel.col .. ' ---\n'
   local hover_msg = ''
+  -- The most common markup kind in LSP is markdown
+  local markup_kind = 'markdown'
+
   -- result is MarkedString[]
   if type(result.contents) == 'table' and #result.contents > 0 then
     lspc.log('hover returned list of length ' .. #result.contents)
-    for i, v in ipairs(result.contents) do
+
+    for i, marked_string in ipairs(result.contents) do
       if i == 1 then
-        hover_msg = v.value or v
+        hover_msg = marked_string.value or marked_string
       else
-        hover_msg = hover_msg .. '\n---\n' .. (v.value or v)
+        hover_msg = hover_msg .. '\n---\n' .. (marked_string.value or marked_string)
       end
     end
-    -- result is either MarkedString or MarkupContent
-  else
+  else -- result is either MarkedString or MarkupContent
     hover_msg = result.contents.value or result.contents
+    if result.contents.kind and result.contents.kind == 'plaintext' then
+      markup_kind = 'text'
+    end
   end
-  vis:message(hover_header .. '\n' .. hover_msg)
+  lspc_show_message(hover_msg, hover_header, markup_kind)
 end
 
 local function lspc_handle_signature_help_method_response(win, result, call_pos)
@@ -859,8 +882,8 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
   local signatures = result.signatures
 
   local sel = vis_pos_to_sel(win, call_pos)
-  local help_header = '--- signature help: ' .. (win.file.path or '') .. ':' .. sel.line .. ', ' ..
-                          sel.col .. ' ---'
+  local help_header = '--- signature help: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' ..
+                          sel.col .. ' ---\n'
 
   -- local help_msg = json.encode(result)
   local help_msg = ''
@@ -872,7 +895,9 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
     end
     help_msg = help_msg .. '\n' .. sig_msg
   end
-  vis:message(help_header .. help_msg)
+  -- strip first new line from the message
+  help_msg = help_msg:sub(2)
+  lspc_show_message(help_msg, help_header)
 end
 
 local function lspc_handle_rename_method_response(win, result)
@@ -1370,7 +1395,7 @@ local function lspc_show_diagnostic(ls, win, line)
     end
   end
 
-  local diagnostics_fmt = '%d:%d %s:%s\n'
+  local diagnostics_fmt = '%d:%d %s: %s\n'
   local diagnostics_msg = ''
   for _, diagnostic in ipairs(diagnostics_to_show) do
     diagnostics_msg = diagnostics_msg ..
@@ -1380,7 +1405,7 @@ local function lspc_show_diagnostic(ls, win, line)
   end
 
   if diagnostics_msg ~= '' then
-    vis:message(diagnostics_msg)
+    lspc_show_message(diagnostics_msg)
   else
     lspc_warn('No diagnostics available for line: ' .. line)
   end
