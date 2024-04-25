@@ -597,9 +597,34 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   end
 end
 
+-- translate file line number to the relative row the line is displayed in the view of a window
+-- returns an integer relative to the window if line is in view (starting at 1)
+-- returns nil otherwise
+local function file_lineno_to_viewport_lineno(win, file_lineno)
+  -- The line is not in the current viewport
+  if file_lineno < win.viewport.lines.start or file_lineno > win.viewport.lines.finish then
+    return nil
+  end
+
+  -- The line is in the viewport and there is no wrapped line
+  if win.viewport.lines.finish - win.viewport.lines.start == win.viewport.height then
+    return file_lineno - win.viewport.lines.start
+  else -- Determine the position in the viewport considering possible prior wrapped lines
+    local view_lineno = 0
+    for n = win.viewport.lines.start, file_lineno do
+      view_lineno = view_lineno + 1
+      -- Wrapped line this shifts our displayed line down
+      if #win.file.lines[n] > win.viewport.width then
+        view_lineno = view_lineno + #win.file.lines[n] // win.viewport.width
+      end
+    end
+    return view_lineno
+  end
+end
+
 local function lspc_highlight_diagnostics(win, diagnostics, style)
   if not style then
-    style = lspc.diagnostic_style_id
+    style = lspc.diagnostic_style_id or win.STYLE_LEXER_MAX
   end
 
   local level_mapping = {
@@ -611,7 +636,7 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
 
   for _, diagnostic in ipairs(diagnostics) do
     local diagnostic_style = level_mapping[diagnostic.severity] or level_mapping[1]
-    assert(win:style_define(lspc.diagnostic_style_id, diagnostic_style))
+    assert(win:style_define(style, diagnostic_style))
 
     if lspc.highlight_diagnostics == 'range' then
       local range = diagnostic.vis_range
@@ -625,22 +650,25 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
       end
 
     elseif lspc.highlight_diagnostics == 'line' then
-      if not win.style_lineno then
-        lspc_err('Vis build does not support style_lineno')
+      if not win.style_pos then
+        lspc_err('Vis build does not support style_pos')
         return
       end
 
-      local start_line = diagnostic.range.start.line + 1
-      local end_line = diagnostic.range['end'].line + 1
+      local start_line = diagnostic.range.start.line
+      local end_line = diagnostic.range['end'].line
       for line = start_line, end_line, 1 do
-        win:style_lineno(style, line)
+        local row = file_lineno_to_viewport_lineno(win, line)
+        if row then
+          -- Heuristic how many cells need to be styled
+          -- (at least one plus the decimal places of the line number).
+          for i = 0, #('' .. line) do
+            win:style_pos(style, i, row)
+          end
+        end
       end
     end
   end
-end
-
-local function lspc_clear_highlight_diagnostics(win, diagnostics)
-  lspc_highlight_diagnostics(win, diagnostics, win.STYLE_DEFAULT)
 end
 
 -- send a rpc message to a language server
@@ -1047,11 +1075,7 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
       diagnostic.content = vis.win.file:content(diagnostic.vis_range)
     end
 
-    if file.diagnostics then
-      lspc_clear_highlight_diagnostics(vis.win, file.diagnostics)
-    end
     file.diagnostics = diagnostics
-
     lspc.log('remembered ' .. #diagnostics .. ' diagnostics for ' .. file_path)
   else
     lspc.log('Diagnostics for not opened file' .. file_path)
@@ -1620,20 +1644,20 @@ vis:command_register('lspc-show-diagnostics', function(argv, _, win)
 end)
 
 -- vis-lspc event hooks
-
 vis.events.subscribe(vis.events.WIN_OPEN, function(win)
   if lspc.autostart and win.syntax then
     ls_start_server(win.syntax)
   end
 end)
 
-vis.events.subscribe(vis.events.WIN_HIGHLIGHT, function(win)
-  local ls = lspc_get_usable_ls(win.syntax)
-  if not ls then
+local function highlight_event()
+  local win = vis.win
+  if not win or not win.file then
     return
   end
 
-  if not win.file then
+  local ls = lspc_get_usable_ls(win.syntax)
+  if not ls then
     return
   end
 
@@ -1641,7 +1665,10 @@ vis.events.subscribe(vis.events.WIN_HIGHLIGHT, function(win)
   if open_file and open_file.diagnostics and lspc.highlight_diagnostics then
     lspc_highlight_diagnostics(win, open_file.diagnostics)
   end
-end)
+end
+
+vis.events.subscribe(vis.events.WIN_HIGHLIGHT, highlight_event)
+vis.events.subscribe(vis.events.UI_DRAW, highlight_event)
 
 vis.events.subscribe(vis.events.FILE_OPEN, function(file)
   local win = vis.win
