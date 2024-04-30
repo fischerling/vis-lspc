@@ -696,7 +696,7 @@ local function ls_rpc(ls, req)
 
   local header_part = 'Content-Length: ' .. tostring(content_len)
   local msg = header_part .. '\r\n\r\n' .. content_part
-  lspc.log('LSPC Sending: ' .. msg)
+  lspc.log('LSPC Sending -> ' .. ls.name .. ': ' .. msg)
 
   ls.fd:write(msg)
   ls.fd:flush()
@@ -1286,7 +1286,7 @@ local function ls_start(ls, init_options)
       return
     end
 
-    lspc.log('LS response(' .. event .. '): ' .. msg)
+    lspc.log(ls.name .. ' response(' .. event .. '): ' .. msg)
     if event == 'STDERR' then
       return
     end
