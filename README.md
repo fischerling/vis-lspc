@@ -14,7 +14,7 @@ A language server protocol client for the [`vis` editor](https://github.com/mart
 * `textDocument/hover`
 * `textDocument/rename`
 * `textDocument/formatting`
-* `[Diagnostics]`
+* `Diagnostics`
 
 ## What's not working
 
@@ -161,6 +161,8 @@ Additional fields are:
 * `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
 * `init_options` - table of arbitrary possibly nested data. It will be sent to the server as `initializationOptions` in the parameters of the `initialize` method call.
 * `formatting_options` - table of configuration data as found in [the LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting). `tabSize` and `insertSpaces` are required.
+* `initialized_hook` - function called after sending the `initialized` notification. The first parameter is the language server.
+* `file_open_hook` - function called after sending the `textDocument/didOpen` notification. The first parameter is the language server.
 
 **Example:** The language server configuration entry in the `ls_map` for `lua-language-server`
 
