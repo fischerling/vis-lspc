@@ -1,6 +1,6 @@
 .PHONY: check format check-luacheck check-format
 
-LUA_FILES := $(shell find -name "*.lua" -not -path "./json.lua")
+LUA_FILES := $(shell find -name "*.lua" -not -path "./json.lua" -and -not -path "./tests/*")
 
 TEST_FILES := $(shell find -name "*_test.lua")
 

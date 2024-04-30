@@ -58,7 +58,10 @@ local lspc = {
   show_message = 'message',
 
   -- events
-  events = {LS_INITIALIZED = 'LspcEvent::LS_INITIALIZED'},
+  events = {
+    LS_INITIALIZED = 'LspcEvent::LS_INITIALIZED',
+    LS_DID_OPEN = 'LspcEvent::LS_DID_OPEN',
+  },
 }
 
 --

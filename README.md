@@ -161,8 +161,6 @@ Additional fields are:
 * `settings` - a table of arbitrary possibly nested data. It is sent in a `workspace/didChangeConfiguration` to the language server after initialization. It is also used to lookup configuration for the `workspace/configuratio` method call.
 * `init_options` - table of arbitrary possibly nested data. It will be sent to the server as `initializationOptions` in the parameters of the `initialize` method call.
 * `formatting_options` - table of configuration data as found in [the LSP specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_formatting). `tabSize` and `insertSpaces` are required.
-* `initialized_hook` - function called after sending the `initialized` notification. The first parameter is the language server.
-* `file_open_hook` - function called after sending the `textDocument/didOpen` notification. The first parameter is the language server.
 
 **Example:** The language server configuration entry in the `ls_map` for `lua-language-server`
 
@@ -178,6 +176,15 @@ ls_map.lua = {
 ```
 
 Language servers configured in `vis-lspc` can be found in `supported_servers.lua`.
+
+### Events
+
+vis-lspc extends vis' event system with its own set of events:
+
+* `lspc.event.LS_INITIALIZED` - emitted after sending the `initialized` notification
+* `lspc.event.LS_DID_OPEN` - emitted after sending the `textDocument/didOpen` notification
+
+All events receive the language server as first argument.
 
 ### Extensibility
 
