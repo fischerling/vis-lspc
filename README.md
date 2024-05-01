@@ -52,21 +52,7 @@ Their configuration can be found in [`supported_servers.lua`](https://gitlab.com
 1. Clone this repository into your `vis` plugins directory
 2. Load the plugin in your `visrc.lua` with `require('plugins/vis-lspc')`
 
-## Easy `vis-lspc` installation with `Guix 'R Us`
-
-The [`Guix 'R Us`](https://git.sr.ht/~whereiseveryone/guixrus) channel provides a fork of `vis` with the [communicate](https://github.com/martanne/vis/pull/675) API patches applied. Additionally, `vis-lspc` is bundled for convenience.
-
-After [adding `Guix 'R Us`](https://git.sr.ht/~whereiseveryone/guixrus#permanent) to your [`channels.scm`](https://guix.gnu.org/manual/en/html_node/Using-a-Custom-Guix-Channel.html), run the following command to build and install `vis-lsp`:
-
-`guix install vis-lsp`
-
-Alternatively, you can clone `Guix 'R Us` and install from a local git checkout:
-
-`git clone https://git.sr.ht/~whereiseveryone/guixrus`
-
-`cd guixrus`
-
-`guix install -L . vis-lsp`
+Alternatively, a plugin manager like [vis-plug](https://github.com/erf/vis-plug) can be used to install `vis-lspc`.
 
 ## Usage
 
