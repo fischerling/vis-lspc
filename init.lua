@@ -965,8 +965,6 @@ local function lspc_handle_initialize_response(ls, result)
   setmetatable(params, {__jsontype = 'object'})
   ls_send_notification(ls, 'initialized', params)
 
-  vis.events.emit(lspc.events.LS_INITIALIZED, ls)
-
   -- According to nvim-lspconfig sendig the lsp server settings shortly after
   -- initialization is a undocumented convention.
   -- See https://github.com/neovim/nvim-lspconfig/blob/ed88435764d8b00442e66d39ec3d9c360e560783/CONTRIBUTING.md
@@ -975,6 +973,8 @@ local function lspc_handle_initialize_response(ls, result)
       settings = ls.settings,
     })
   end
+
+  vis.events.emit(lspc.events.LS_INITIALIZED, ls)
 end
 
 -- method response dispatcher
