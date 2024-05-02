@@ -1307,8 +1307,6 @@ local function new_ls(ls_conf)
     name = ls_conf.name,
     cmd = ls_conf.cmd,
     settings = ls_conf.settings,
-    initialized_hook = ls_conf.initialized_hook,
-    file_open_hook = ls_conf.file_open_hook,
     formatting_options = ls_conf.formatting_options,
     initialized = false,
     id = 0,
