@@ -625,7 +625,7 @@ local function file_lineno_to_viewport_lineno(win, file_lineno)
       view_lineno = view_lineno + 1
       -- Wrapped line this shifts our displayed line down
       if #win.file.lines[n] > win.viewport.width then
-        view_lineno = view_lineno + #win.file.lines[n] // win.viewport.width
+        view_lineno = view_lineno + math.floor(#win.file.lines[n] / win.viewport.width)
       end
     end
     return view_lineno
