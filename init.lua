@@ -1307,6 +1307,7 @@ local function new_ls(ls_conf)
     id = 0,
     inflight = {},
     parser = parser.Parser(),
+    capabilities = {},
 
     -- exported methods of a language server
     send_notification = ls_send_notification,
@@ -1520,6 +1521,7 @@ for name, func in pairs(lspc_goto_location_methods) do
       lspc_err(err)
       return
     end
+    assert(ls)
 
     -- vis cmd how to open the new location
     -- 'e' (default): in same window
@@ -1539,6 +1541,7 @@ vis:command_register('lspc-hover', function(_, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   -- remember the position where hover was called
   err = lspc_method_doc_pos(ls, 'hover', win, win.selection.pos)
@@ -1553,6 +1556,7 @@ vis:command_register('lspc-signature-help', function(_, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   -- remember the position where signatureHelp was called
   err = lspc_method_doc_pos(ls, 'signatureHelp', win, win.selection.pos)
@@ -1573,6 +1577,7 @@ vis:command_register('lspc-rename', function(argv, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   -- check if the language server has a provider for this method
   if not ls.capabilities['renameProvider'] then
@@ -1596,6 +1601,7 @@ vis:command_register('lspc-format', function(_, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   -- check if the language server has a provider for this method
   if not ls.capabilities['documentFormattingProvider'] then
@@ -1627,6 +1633,7 @@ vis:command_register('lspc-completion', function(_, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   -- remember the position where completions were requested
   -- to apply insertText completions
@@ -1654,6 +1661,7 @@ vis:command_register('lspc-shutdown-server', function(argv, _, win)
     lspc_err('no language server running: ' .. err)
     return
   end
+  assert(ls)
 
   ls:shutdown()
 end)
@@ -1664,6 +1672,7 @@ vis:command_register('lspc-close', function(_, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   lspc_close(ls, win.file)
 end)
@@ -1674,6 +1683,7 @@ vis:command_register('lspc-open', function(argv, _, win)
     lspc_err(err)
     return
   end
+  assert(ls)
 
   lspc_open(ls, win, win.file)
 end)
