@@ -1187,35 +1187,36 @@ local function lspc_get_usable_ls(syntax)
   return ls
 end
 
+local function lspc_new_file_handle(file)
+  return {file = file, version = 0, diagnostics = {}, language_servers = {}}
+end
+
+-- detect if a file is already opened in a language server
+local function ls_is_file_opened(ls, file)
+  return lspc.open_files[file.path] and lspc.open_files[file.path].language_servers[ls]
+end
+
+-- close the file if associated with the language server
 local function lspc_close(ls, file)
-  if not lspc.open_files[file.path] then
-    return file.path .. ' not open'
+  if not ls_is_file_opened(ls, file) then
+    return file.path .. ' not open in ' .. ls.name
   end
   ls_send_notification(ls, 'textDocument/didClose', {
     textDocument = {uri = path_to_uri(file.path)},
   })
-  lspc.open_files[file.path] = nil
-  file.lspc = nil
+  lspc.open_files[file.path][ls] = nil
 end
 
--- register a file as open with a language server and setup a close and save event handlers
+-- register a file as open with a language server and setup close and save event handlers
 -- A file must be opened before any textDocument functions can be used with it.
 local function lspc_open(ls, win, file)
   -- already opened
-  if lspc.open_files[file.path] then
-    return file.path .. ' already open'
+  if ls_is_file_opened(ls, file) then
+    return file.path .. ' already open in ' .. ls.name
   end
 
-  local lspc_file_handle = lspc.open_files[file.path]
-  if not lspc_file_handle then
-    lspc_file_handle = {
-      file = file,
-      version = 0,
-      diagnostics = {},
-      language_servers = {},
-    }
-  end
-  table.insert(lspc_file_handle.language_servers, ls)
+  local lspc_file_handle = lspc.open_files[file.path] or lspc_new_file_handle(file)
+  lspc_file_handle.language_servers[ls] = true
   lspc.open_files[file.path] = lspc_file_handle
 
   local params = {
@@ -1229,23 +1230,17 @@ local function lspc_open(ls, win, file)
 
   ls_send_notification(ls, 'textDocument/didOpen', params)
 
-  vis.events.subscribe(vis.events.FILE_CLOSE, function(file) -- luacheck: ignore file
-    for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
-      if lspc.open_files[file.path] then
-        lspc_close(ls, file)
-      end
-    end
+  vis.events.subscribe(vis.events.FILE_CLOSE, function(closed_file)
+    lspc_close(ls, closed_file)
   end)
 
   -- the server is interested in didSave notifications
   if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) == 'table' and
       ls.capabilities.textDocumentSync.save then
-    vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path) -- luacheck: ignore file
-      for _, ls in pairs(lspc.running) do -- luacheck: ignore ls
-        if lspc.open_files[file.path] then
-          local params = {textDocument = {uri = path_to_uri(path)}} -- luacheck: ignore params
-          ls_send_notification(ls, 'textDocument/didSave', params)
-        end
+    vis.events.subscribe(vis.events.FILE_SAVE_POST, function(saved_file, path)
+      if ls_is_file_opened(saved_file, ls) then
+        local did_save_params = {textDocument = {uri = path_to_uri(path)}}
+        ls_send_notification(ls, 'textDocument/didSave', did_save_params)
       end
     end)
   end
@@ -1311,7 +1306,6 @@ local function new_ls(ls_conf)
     initialized = false,
     id = 0,
     inflight = {},
-    open_files = {},
     parser = parser.Parser(),
 
     -- exported methods of a language server
@@ -1360,7 +1354,7 @@ local function lspc_method_doc_pos(ls, method, win, argv, additional_params)
     return 'language server ' .. ls.name .. ' does not provide ' .. method
   end
 
-  if not lspc.open_files[win.file.path] then
+  if not ls_is_file_opened(ls, win.file) then
     lspc_open(ls, win, win.file)
   end
 
@@ -1586,7 +1580,7 @@ vis:command_register('lspc-rename', function(argv, _, win)
     return
   end
 
-  if not lspc.open_files[win.file.path] then
+  if not ls_is_file_opened(ls, win.file.path) then
     lspc_open(ls, win, win.file)
   end
 
@@ -1753,16 +1747,13 @@ vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
     return
   end
 
-  local ls = lspc_get_usable_ls(vis.win.syntax)
-  if not ls then
+  local file_handle = lspc.open_files[path]
+  if not file_handle then
     return
   end
-
-  if not ls.open_files[path] then
-    lspc_open(ls, vis.win, file)
+  for ls in pairs(file_handle.language_servers) do
+    ls_send_did_change(ls, file)
   end
-
-  ls_send_did_change(ls, file)
 end)
 
 vis.events.subscribe(lspc.events.LS_INITIALIZED, function(ls)
