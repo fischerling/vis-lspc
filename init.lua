@@ -653,29 +653,6 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     end
   end
 
-  -- generate change summary
-  local summary = '--- workspace edit summary ---\n'
-  for uri, edits in pairs(file_edits) do
-    local path = uri_to_path(uri)
-    summary = summary .. path .. ':\n'
-    for i, edit in ipairs(edits) do
-      summary = summary .. '\t' .. i .. '.: ' .. json.encode(edit) .. '\n'
-    end
-  end
-
-  _show_message(summary)
-  vis:redraw()
-
-  -- get user confirmation
-  local confirmation = lspc_confirm('apply changes:')
-
-  -- close summary window
-  vis:command('q')
-
-  if not confirmation then
-    return
-  end
-
   -- apply changes to open files
   for uri, edits in pairs(file_edits) do
     local path = uri_to_path(uri)
