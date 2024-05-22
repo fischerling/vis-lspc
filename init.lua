@@ -1204,7 +1204,10 @@ local function lspc_close(ls, file)
   ls_send_notification(ls, 'textDocument/didClose', {
     textDocument = {uri = path_to_uri(file.path)},
   })
-  lspc.open_files[file.path][ls] = nil
+  lspc.open_files[file.path].language_servers[ls] = nil
+  if not next(lspc.open_files[file.path].language_servers) then
+    lspc.open_files[file.path] = nil
+  end
 end
 
 -- register a file as open with a language server and setup close and save event handlers
