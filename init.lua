@@ -1165,23 +1165,33 @@ local function ls_recv_data(ls, data)
 end
 
 -- check if a language server is running and initialized
-local function lspc_get_usable_ls(syntax)
+local function lspc_get_usable_ls(win, explicit_syntax)
+  local ls
+  local syntax = explicit_syntax or (win and win.syntax)
+  -- try to use the first language server managing the current file
   if not syntax then
-    return nil, 'No syntax provided'
-  end
+    if win and win.file and lspc.open_files[win.file.path] and
+        next(lspc.open_files[win.file.path].language_servers) then
+      ls = next(lspc.open_files[win.file.path].language_servers)
 
-  local ls_name, err = get_ls_name_for_syntax(syntax)
-  if err then
-    return nil, err
-  end
+    else -- there is no language server with this file open and we have no syntax to guess
+      return nil, 'No syntax provided and no server is running'
+    end
 
-  local ls = lspc.running[ls_name]
-  if not ls then
-    return nil, 'No language server running for ' .. syntax
+  else -- Use the syntax to guess the language server
+    local ls_name, err = get_ls_name_for_syntax(syntax)
+    if err then
+      return nil, err
+    end
+
+    ls = lspc.running[ls_name]
+    if not ls then
+      return nil, 'No language server running for ' .. syntax
+    end
   end
 
   if not ls.initialized then
-    return nil, 'Language server for ' .. syntax .. ' not initialized yet. Please try again'
+    return nil, 'Language server ' .. ls.name .. ' not initialized yet. Please try again'
   end
 
   return ls
@@ -1519,7 +1529,7 @@ end)
 
 for name, func in pairs(lspc_goto_location_methods) do
   vis:command_register('lspc-' .. name, function(argv, _, win)
-    local ls, err = lspc_get_usable_ls(win.syntax)
+    local ls, err = lspc_get_usable_ls(win, argv[1])
     if err then
       lspc_err(err)
       return
@@ -1538,8 +1548,8 @@ for name, func in pairs(lspc_goto_location_methods) do
   end)
 end
 
-vis:command_register('lspc-hover', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+vis:command_register('lspc-hover', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1553,8 +1563,8 @@ vis:command_register('lspc-hover', function(_, _, win)
   end
 end)
 
-vis:command_register('lspc-signature-help', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+vis:command_register('lspc-signature-help', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1575,7 +1585,7 @@ vis:command_register('lspc-rename', function(argv, _, win)
     return
   end
 
-  local ls, err = lspc_get_usable_ls(win.syntax)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1598,8 +1608,8 @@ vis:command_register('lspc-rename', function(argv, _, win)
   ls_call_text_document_method(ls, 'rename', params, win)
 end)
 
-vis:command_register('lspc-format', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+vis:command_register('lspc-format', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1630,8 +1640,8 @@ vis:command_register('lspc-format', function(_, _, win)
   ls_call_text_document_method(ls, 'formatting', params, win)
 end)
 
-vis:command_register('lspc-completion', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+vis:command_register('lspc-completion', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1659,7 +1669,7 @@ vis:command_register('lspc-start-server', function(argv, _, win)
 end)
 
 vis:command_register('lspc-shutdown-server', function(argv, _, win)
-  local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err('no language server running: ' .. err)
     return
@@ -1669,8 +1679,8 @@ vis:command_register('lspc-shutdown-server', function(argv, _, win)
   ls:shutdown()
 end)
 
-vis:command_register('lspc-close', function(_, _, win)
-  local ls, err = lspc_get_usable_ls(win.syntax)
+vis:command_register('lspc-close', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1681,7 +1691,7 @@ vis:command_register('lspc-close', function(_, _, win)
 end)
 
 vis:command_register('lspc-open', function(argv, _, win)
-  local ls, err = lspc_get_usable_ls(argv[1] or win.syntax)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
     lspc_err(err)
     return
@@ -1726,7 +1736,7 @@ local function highlight_event()
     return
   end
 
-  local ls = lspc_get_usable_ls(win.syntax)
+  local ls = lspc_get_usable_ls(win)
   if not ls then
     return
   end
@@ -1747,7 +1757,7 @@ vis.events.subscribe(vis.events.FILE_OPEN, function(file)
     return
   end
 
-  local ls = lspc_get_usable_ls(win.syntax)
+  local ls = lspc_get_usable_ls(win)
   if not ls then
     return
   end
@@ -1770,7 +1780,7 @@ vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
 end)
 
 vis.events.subscribe(lspc.events.LS_INITIALIZED, function(ls)
-  if vis.win and vis.win.file and lspc_get_usable_ls(vis.win.syntax) == ls then
+  if vis.win and vis.win.file and lspc_get_usable_ls(vis.win) == ls then
     lspc_open(ls, vis.win, vis.win.file)
   end
 end)
