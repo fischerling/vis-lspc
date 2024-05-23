@@ -745,7 +745,7 @@ end
 -- resulting in longer stalls after method invocation.
 local function ls_call_text_document_method(ls, method, params, win, ctx)
   ls_send_did_change(ls, win.file)
-  ls_call_method(ls, 'textDocument/' .. method, params, win, ctx)
+  ls:call_method('textDocument/' .. method, params, win, ctx)
 end
 
 local function lspc_handle_goto_method_response(req, result)
@@ -1255,7 +1255,7 @@ end
 -- Sending the exit notification and closing the file handle are done in
 -- the shutdown response handler.
 local function ls_shutdown(ls)
-  ls_call_method(ls, 'shutdown')
+  ls:call_method('shutdown')
 end
 
 local function ls_start(ls, init_options)
