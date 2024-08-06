@@ -1424,7 +1424,7 @@ local function lspc_goto_next_diagnostic(win, reverse)
   local open_file = lspc.open_files[win.file.path]
 
   if not has_diagnostics(open_file) then
-    return win.file.path .. ' has no diagnostics available'
+    return (win.file.path or 'window') .. ' has no available diagnostics'
   end
 
   -- merge diagnostics
