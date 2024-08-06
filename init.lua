@@ -337,7 +337,7 @@ local function lspc_select(choices)
   end
 
   local status, output
-  local cmd = 'printf "' .. menu_input .. '" | ' .. lspc.menu_cmd
+  local cmd = 'printf %s \'' .. menu_input:gsub('\'', '\'"\'"\'') .. '\' | ' .. lspc.menu_cmd
   lspc.log('collect choice using: ' .. cmd)
 
   if lspc.menu_cmd:sub(0, 8) == 'vis-menu' then
@@ -388,7 +388,7 @@ end
 local function lspc_confirm(prompt)
   local choices = 'no\nyes'
 
-  local cmd = 'printf "' .. choices .. '" | ' .. lspc.confirm_cmd
+  local cmd = 'printf %s \'' .. choices .. '\' | ' .. lspc.confirm_cmd
 
   if prompt then
     cmd = cmd .. ' -p \'' .. prompt .. '\''
