@@ -10,7 +10,7 @@ local lunatest = require('lunatest')
 
 function test_complete_msg() -- luacheck: ignore 111
   local msg = build_msg('foo')
-  local p = parser.Parser()
+  local p = parser.new()
   local err = p:add(msg)
   lunatest.assert_nil(err)
 
@@ -21,7 +21,7 @@ function test_complete_msg() -- luacheck: ignore 111
 end
 
 function test_two_complete_msgs() -- luacheck: ignore 111
-  local p = parser.Parser()
+  local p = parser.new()
   local data = build_msg('foo')
   local err = p:add(data)
   lunatest.assert_nil(err)
@@ -42,7 +42,7 @@ end
 
 function test_two_complete_msgs_at_once() -- luacheck: ignore 111
   local data = build_msg('foo') .. build_msg('bar')
-  local p = parser.Parser()
+  local p = parser.new()
   local err = p:add(data)
   lunatest.assert_nil(err)
 
@@ -57,7 +57,7 @@ function test_split_msg() -- luacheck: ignore 111
   local msg = build_msg('foo')
   local part1 = msg:sub(1, -3)
   local part2 = msg:sub(-2)
-  local p = parser.Parser()
+  local p = parser.new()
   local err = p:add(part1)
   lunatest.assert_nil(err)
 
@@ -74,7 +74,7 @@ function test_complete_and_split_msg() -- luacheck: ignore 111
   local msg = build_msg('foo') .. build_msg('bar')
   local part1 = msg:sub(1, -3)
   local part2 = msg:sub(-2)
-  local p = parser.Parser()
+  local p = parser.new()
   local err = p:add(part1)
   lunatest.assert_nil(err)
 
@@ -92,7 +92,7 @@ function test_split_hdr() -- luacheck: ignore 111
   local msg = build_msg('foo')
   local part1 = msg:sub(1, 3)
   local part2 = msg:sub(4)
-  local p = parser.Parser()
+  local p = parser.new()
   local err = p:add(part1)
   lunatest.assert_nil(err)
 
@@ -109,7 +109,7 @@ function test_split_hdr_body_sep() -- luacheck: ignore 111
   local msg = build_msg('foo')
   local part1 = msg:sub(1, 19)
   local part2 = msg:sub(20)
-  local p = parser.Parser()
+  local p = parser.new()
   local err = p:add(part1)
   lunatest.assert_nil(err)
 

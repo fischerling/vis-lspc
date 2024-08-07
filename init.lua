@@ -1319,7 +1319,7 @@ local function new_ls(ls_conf)
     initialized = false,
     id = 0,
     inflight = {},
-    parser = parser.Parser(),
+    parser = parser.new(),
     capabilities = {},
 
     -- exported methods of a language server
