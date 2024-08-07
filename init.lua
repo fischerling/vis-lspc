@@ -1258,7 +1258,7 @@ local function lspc_open(ls, win, file)
     end)
   end
 
-  vis.events.emit(lspc.events.LS_DID_OPEN, ls)
+  vis.events.emit(lspc.events.LS_DID_OPEN, ls, file)
 end
 
 -- Initiate the shutdown of a language server
