@@ -1581,11 +1581,11 @@ end)
 vis:command_register('lspc-rename', function(argv, _, win)
   local new_name = argv[1]
   if not new_name then
-    lspc_err('lspc-rename usage: <new name>')
+    lspc_err('lspc-rename usage: <new name> [syntax]')
     return
   end
 
-  local ls, err = lspc_get_usable_ls(win, argv[1])
+  local ls, err = lspc_get_usable_ls(win, argv[2])
   if err then
     lspc_err(err)
     return
