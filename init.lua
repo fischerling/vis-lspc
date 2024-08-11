@@ -512,6 +512,8 @@ local function vis_apply_textEdits(win, file, textEdits)
 end
 
 local function lspc_show_message(msg, hdr, syntax)
+  local current_win = vis.win
+
   if lspc.show_message == 'message' then
     vis:message((hdr or '') .. msg)
 
@@ -526,6 +528,9 @@ local function lspc_show_message(msg, hdr, syntax)
   else
     lspc_err('invalid message configuration "' .. lspc.show_message .. '".')
   end
+
+  -- reset the focus to the current window
+  vis.win = current_win
 end
 
 -- apply a WorkspaceEdit received from the language server
