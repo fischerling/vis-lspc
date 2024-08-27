@@ -26,6 +26,9 @@ local source_path = source_str:match('(.*/)')
 -- state of our language server client
 local lspc = dofile(source_path .. 'lspc.lua')
 
+-- initialise the logging system
+lspc.logger = dofile(source_path .. 'log.lua').new('lspc', lspc.logging, lspc.log_file)
+
 local parser = dofile(source_path .. 'parser.lua')
 
 -- load a suitable json module
@@ -48,9 +51,6 @@ jsonrpc.error_codes = {
   RequestCancelled = -32800,
 }
 
--- Forward declaration of lspc_err to use it in capture_cmd
-local lspc_err
-
 -- Helper to execute a command and capture its output
 local function capture_cmd(cmd)
   local p = assert(io.popen(cmd, 'r'))
@@ -58,71 +58,9 @@ local function capture_cmd(cmd)
   local success, _, status = p:close()
   if not success then
     local err = cmd .. ' failed with exit code: ' .. status
-    if lspc_err then
-      lspc_err(err)
-    else
-      vis:info('LSPC Error: ' .. err)
-    end
+    lspc:err(err)
   end
   return s
-end
-
--- logging system
--- if lspc.logging is set to true the first call to lspc.log
--- will open the log file and replace lspc.log with the actual log function
-local init_logging
-do
-  local log_fd
-  local function log(msg)
-    log_fd:write(msg)
-    log_fd:write('\n')
-    log_fd:flush()
-  end
-
-  init_logging = function(msg)
-    if not lspc.logging then
-      return
-    end
-
-    local log_file = lspc.log_file
-
-    -- open the default log file in $XDG_DATA_HOME/vis-lspc
-    if not log_file then
-      local xdg_data = os.getenv('XDG_DATA_HOME') or os.getenv('HOME') .. '/.local/share'
-      local log_dir = xdg_data .. '/vis-lspc'
-
-      -- ensure the direcoty exists
-      os.execute('mkdir -p ' .. log_dir)
-
-      -- log file format: {time-stamp}-{basename-cwd}.log
-      local log_file_fmt = log_dir .. '/%s-%s.log'
-      local timestamp = os.date('%Y-%m-%dT%H:%M:%S')
-      local cwd = capture_cmd('pwd')
-      local basename_cwd = capture_cmd('basename "' .. cwd .. '"'):match('^%s*(.-)%s*$')
-      log_file = log_file_fmt:format(timestamp, basename_cwd)
-
-    elseif type(log_file) == 'function' then
-      log_file = log_file()
-    end
-
-    log_fd = assert(io.open(log_file, 'w'))
-    lspc.log = log
-
-    log(msg)
-  end
-end
-lspc.log = init_logging
-
-local function lspc_warn(msg)
-  local warning = 'LSPC Warning: ' .. msg
-  lspc.log(warning)
-  vis:info(warning)
-end
-
-lspc_err = function(msg)
-  local err = 'LSPC Error: ' .. msg
-  lspc.log(err)
-  vis:info(err)
 end
 
 -- get vis's pid to pass it to the language servers
@@ -318,7 +256,7 @@ local function lspc_select(choices)
 
   local status, output
   local cmd = 'printf %s \'' .. menu_input:gsub('\'', '\'"\'"\'') .. '\' | ' .. lspc.menu_cmd
-  lspc.log('collect choice using: ' .. cmd)
+  lspc:log('collect choice using: ' .. cmd)
 
   if lspc.menu_cmd:sub(0, 8) == 'vis-menu' then
     status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
@@ -374,7 +312,7 @@ local function lspc_confirm(prompt)
     cmd = cmd .. ' -p \'' .. prompt .. '\''
   end
 
-  lspc.log('get confirmation using: ' .. cmd)
+  lspc:log('get confirmation using: ' .. cmd)
   -- local menu = io.popen(cmd)
   -- local output = menu:read('*a')
   -- local _, _, status = menu:close()
@@ -506,7 +444,7 @@ local function lspc_show_message(msg, hdr, syntax)
     vis.win.file:insert(0, msg)
     vis.win.selection.pos = 0
   else
-    lspc_err('invalid message configuration "' .. lspc.show_message .. '".')
+    lspc:err('invalid message configuration "' .. lspc.show_message .. '".')
   end
 
   -- reset the focus to the current window
@@ -646,7 +584,7 @@ local function lspc_highlight_server_diagnostics(win, server_diagnostics, style)
 
     elseif lspc.highlight_diagnostics == 'line' then
       if not win.style_pos then
-        lspc_err('Vis build does not support style_pos')
+        lspc:err('Vis build does not support style_pos')
         return
       end
 
@@ -681,7 +619,7 @@ local function ls_rpc(ls, req)
 
   local header_part = 'Content-Length: ' .. tostring(content_len)
   local msg = header_part .. '\r\n\r\n' .. content_part
-  lspc.log('LSPC Sending -> ' .. ls.name .. ': ' .. msg)
+  lspc:log('LSPC Sending -> ' .. ls.name .. ': ' .. msg)
 
   ls.fd:write(msg)
   ls.fd:flush()
@@ -693,7 +631,7 @@ local function ls_send_notification(ls, method, params)
 end
 
 local function ls_send_did_change(ls, file)
-  lspc.log('send didChange')
+  lspc:log('send didChange')
   local new_version = assert(lspc.open_files[file.path]).version + 1
   lspc.open_files[file.path].version = new_version
 
@@ -735,7 +673,7 @@ end
 
 local function lspc_handle_goto_method_response(req, result)
   if not result or next(result) == nil then
-    lspc_warn(req.method .. ' found no results')
+    lspc:warn(req.method .. ' found no results')
     return
   end
 
@@ -754,7 +692,7 @@ local function lspc_handle_goto_method_response(req, result)
   -- location is a Location
   local lsp_doc_pos
   if location.uri then
-    lspc.log('Handle location: ' .. lspc.json.encode(location))
+    lspc:log('Handle location: ' .. lspc.json.encode(location))
     lsp_doc_pos = {
       textDocument = {uri = location.uri},
       position = {
@@ -764,7 +702,7 @@ local function lspc_handle_goto_method_response(req, result)
     }
     -- location is a LocationLink
   elseif location.targetUri then
-    lspc.log('Handle locationLink: ' .. lspc.json.encode(location))
+    lspc:log('Handle locationLink: ' .. lspc.json.encode(location))
     lsp_doc_pos = {
       textDocument = {uri = location.targetUri},
       position = {
@@ -773,7 +711,7 @@ local function lspc_handle_goto_method_response(req, result)
       },
     }
   else
-    lspc_warn('Unknown location type: ' .. lspc.json.encode(location))
+    lspc:warn('Unknown location type: ' .. lspc.json.encode(location))
   end
 
   local doc_pos = lsp_doc_pos_to_vis(lsp_doc_pos)
@@ -782,7 +720,7 @@ end
 
 local function lspc_handle_completion_method_response(win, result, old_pos)
   if not result or not result.items then
-    lspc_warn('no completion available')
+    lspc:warn('no completion available')
     return
   end
 
@@ -815,14 +753,14 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     -- was called.
     -- Otherwise we don't have a good way to apply the 'insertText' completion
     if win.selection.pos ~= old_pos then
-      lspc_warn('can not apply textInsert because the cursor position changed')
+      lspc:warn('can not apply textInsert because the cursor position changed')
     end
 
     local new_word = completion.insertText or completion.label
     local old_word_range = win.file:text_object_word(old_pos)
     local old_word = win.file:content(old_word_range)
 
-    lspc.log(string.format('Completion old_pos=%d, old_range={start=%d, finish=%d}, old_word=%s',
+    lspc:log(string.format('Completion old_pos=%d, old_range={start=%d, finish=%d}, old_word=%s',
                            old_pos, old_word_range.start, old_word_range.finish,
                            old_word:gsub('\n', '\\n')))
 
@@ -838,7 +776,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     -- search for a possible completion token which we should replace with this insertText
     local matches = does_completion_apply_to_pos(old_pos)
     if not matches then
-      lspc.log('Cursor looks like its not on the completion token')
+      lspc:log('Cursor looks like its not on the completion token')
 
       -- try the common case the cursor is behind its completion token: fooba┃
       local next_pos_candidate = old_pos - 1
@@ -851,7 +789,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
     local completion_start
     -- we found a completion token -> replace it
     if matches then
-      lspc.log('replace the token: ' .. old_word .. '  we found being a prefix of the completion')
+      lspc:log('replace the token: ' .. old_word .. '  we found being a prefix of the completion')
       win.file:delete(old_word_range)
       completion_start = old_word_range.start
     else
@@ -865,12 +803,12 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
   end
 
   -- neither insertText nor textEdit where present
-  lspc_err('Unsupported completion')
+  lspc:err('Unsupported completion')
 end
 
 local function lspc_handle_hover_method_response(win, result, old_pos)
   if not result or not result.contents then
-    lspc_warn('no hover available')
+    lspc:warn('no hover available')
     return
   end
 
@@ -884,7 +822,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
 
   -- result is MarkedString[]
   if type(result.contents) == 'table' and #result.contents > 0 then
-    lspc.log('hover returned list of length ' .. #result.contents)
+    lspc:log('hover returned list of length ' .. #result.contents)
 
     for i, marked_string in ipairs(result.contents) do
       if i == 1 then
@@ -904,7 +842,7 @@ end
 
 local function lspc_handle_signature_help_method_response(win, result, call_pos)
   if not result or not result.signatures or #result.signatures == 0 then
-    lspc_warn('no signature help available')
+    lspc:warn('no signature help available')
     return
   end
 
@@ -972,7 +910,7 @@ local function ls_handle_method_response(ls, method_response, req)
   if err then
     local err_msg = err.message
     local err_code = err.code
-    lspc_err(err_msg .. ' (' .. err_code .. ') occurred during ' .. method)
+    lspc:err(err_msg .. ' (' .. err_code .. ') occurred during ' .. method)
     -- Don't try to handle error responses any further
     return
   end
@@ -1018,7 +956,7 @@ local function ls_handle_method_response(ls, method_response, req)
       end
     end
   else
-    lspc_warn('received unknown method ' .. method)
+    lspc:warn('received unknown method ' .. method)
   end
 
   ls.inflight[method_response.id] = nil
@@ -1045,7 +983,7 @@ local function ls_handle_method_call(ls, method_call)
   if method == 'workspace/configuration' then
     lspc_handle_workspace_configuration_call(ls, method_call.params, response)
   else
-    lspc.log('Unknown method call ' .. method)
+    lspc:log('Unknown method call ' .. method)
     response['error'] = {
       code = jsonrpc.error_codes.MethodNotFound,
       message = method .. ' not implemented',
@@ -1080,9 +1018,9 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
 
     file.diagnostics[ls] = diagnostics
 
-    lspc.log('remembered ' .. #diagnostics .. ' diagnostics for ' .. file_path)
+    lspc:log('remembered ' .. #diagnostics .. ' diagnostics for ' .. file_path)
   else
-    lspc.log('Diagnostics for not opened file' .. file_path)
+    lspc:log('Diagnostics for not opened file' .. file_path)
   end
 end
 
@@ -1134,7 +1072,7 @@ end
 local function ls_recv_data(ls, data)
   local err = ls.parser:add(data)
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
 
@@ -1273,7 +1211,7 @@ local function ls_start(ls, init_options)
       return
     end
 
-    lspc.log(ls.name .. ' response(' .. event .. '): ' .. msg)
+    lspc:log(ls.name .. ' response(' .. event .. '): ' .. msg)
     if event == 'STDERR' then
       return
     end
@@ -1330,7 +1268,7 @@ local function lspc_start_server(syntax)
     local msg = string.format('Language server for %s configured but %s not found', syntax, exe)
     -- the warning will be visual if the language server was automatically startet
     -- if the user tried to start teh server manually they will see msg as error
-    lspc_warn(msg)
+    lspc:warn(msg)
     return nil, msg
   end
 
@@ -1474,7 +1412,7 @@ local function lspc_show_diagnostic(win, line)
   local diagnostics = file.diagnostics
 
   line = line or get_selection(win).line
-  lspc.log('Show diagnostics for ' .. line)
+  lspc:log('Show diagnostics for ' .. line)
   local diagnostics_to_show = {}
   for ls, server_diagnostics in pairs(diagnostics) do
     for _, diagnostic in ipairs(server_diagnostics) do
@@ -1499,7 +1437,7 @@ local function lspc_show_diagnostic(win, line)
   if diagnostics_msg ~= '' then
     lspc_show_message(diagnostics_msg)
   else
-    lspc_warn('No diagnostics available for line: ' .. line)
+    lspc:warn('No diagnostics available for line: ' .. line)
   end
 end
 
@@ -1508,7 +1446,7 @@ end
 vis:command_register('lspc-back', function()
   local err = vis_pop_doc_pos()
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end)
 
@@ -1516,7 +1454,7 @@ for name, func in pairs(lspc_goto_location_methods) do
   vis:command_register('lspc-' .. name, function(argv, _, win)
     local ls, err = lspc_get_usable_ls(win, argv[1])
     if err then
-      lspc_err(err)
+      lspc:err(err)
       return
     end
     assert(ls)
@@ -1528,7 +1466,7 @@ for name, func in pairs(lspc_goto_location_methods) do
     local open_cmd = argv[1] or 'e'
     err = func(ls, win, open_cmd)
     if err then
-      lspc_err(err)
+      lspc:err(err)
     end
   end)
 end
@@ -1536,7 +1474,7 @@ end
 vis:command_register('lspc-hover', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
@@ -1544,14 +1482,14 @@ vis:command_register('lspc-hover', function(argv, _, win)
   -- remember the position where hover was called
   err = lspc_method_doc_pos(ls, 'hover', win, win.selection.pos)
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end)
 
 vis:command_register('lspc-signature-help', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
@@ -1559,27 +1497,27 @@ vis:command_register('lspc-signature-help', function(argv, _, win)
   -- remember the position where signatureHelp was called
   err = lspc_method_doc_pos(ls, 'signatureHelp', win, win.selection.pos)
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end)
 
 vis:command_register('lspc-rename', function(argv, _, win)
   local new_name = argv[1]
   if not new_name then
-    lspc_err('lspc-rename usage: <new name> [syntax]')
+    lspc:err('lspc-rename usage: <new name> [syntax]')
     return
   end
 
   local ls, err = lspc_get_usable_ls(win, argv[2])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
 
   -- check if the language server has a provider for this method
   if not ls.capabilities['renameProvider'] then
-    lspc_err('language server ' .. ls.name .. ' does not provide rename')
+    lspc:err('language server ' .. ls.name .. ' does not provide rename')
     return
   end
 
@@ -1596,14 +1534,14 @@ end)
 vis:command_register('lspc-format', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
 
   -- check if the language server has a provider for this method
   if not ls.capabilities['documentFormattingProvider'] then
-    lspc_err('language server ' .. ls.name .. ' does not provide formatting')
+    lspc:err('language server ' .. ls.name .. ' does not provide formatting')
     return
   end
 
@@ -1628,7 +1566,7 @@ end)
 vis:command_register('lspc-completion', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
@@ -1637,26 +1575,26 @@ vis:command_register('lspc-completion', function(argv, _, win)
   -- to apply insertText completions
   err = lspc_method_doc_pos(ls, 'completion', win, win.selection.pos)
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end)
 
 vis:command_register('lspc-start-server', function(argv, _, win)
   local syntax = argv[1] or win.syntax
   if not syntax then
-    lspc_err('no language specified')
+    lspc:err('no language specified')
   end
 
   local _, err = lspc_start_server(syntax)
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end)
 
 vis:command_register('lspc-shutdown-server', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err('no language server running: ' .. err)
+    lspc:err('no language server running: ' .. err)
     return
   end
   assert(ls)
@@ -1667,7 +1605,7 @@ end)
 vis:command_register('lspc-close', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
@@ -1678,7 +1616,7 @@ end)
 vis:command_register('lspc-open', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
     return
   end
   assert(ls)
@@ -1689,7 +1627,7 @@ end)
 local function _lspc_next_diagnostic(win, reverse)
   local err = lspc_goto_next_diagnostic(win, reverse)
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end
 
@@ -1704,7 +1642,7 @@ end)
 vis:command_register('lspc-show-diagnostics', function(argv, _, win)
   local err = lspc_show_diagnostic(win, argv[1])
   if err then
-    lspc_err(err)
+    lspc:err(err)
   end
 end)
 

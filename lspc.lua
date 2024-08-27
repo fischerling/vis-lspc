@@ -1,20 +1,12 @@
--- Copyright (c) 2021-2023 Florian Fischer. All rights reserved.
---
--- This file is part of vis-lspc.
---
--- vis-lspc is free software: you can redistribute it and/or modify it under the
--- terms of the GNU General Public License as published by the Free Software
--- Foundation, either version 3 of the License, or (at your option) any later
--- version.
---
--- vis-lspc is distributed in the hope that it will be useful, but WITHOUT ANY
--- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
--- FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License along with
--- vis-lspc found in the LICENSE file. If not, see <https://www.gnu.org/licenses/>.
---
--- State of our language server client
+--- State and methods of the language server client.
+-- This module table is returned when requiring the vis-lspc plugin.
+-- @module lspc
+-- @author Florian Fischer
+-- @license GPL-3
+-- @copyright Florian Fischer 2021-2024
+--- Initial state of the client.
+-- This includes the default configuration that can be modified in
+-- your visrc.lua file.
 local lspc = {
   -- mapping language server names to their state tables
   running = {},
@@ -109,5 +101,31 @@ local client_capabilites = {
 }
 
 lspc.client_capabilites = client_capabilites
+
+local Lspc = {}
+
+--- Log a message.
+-- @string: the message to log
+function Lspc:log(msg)
+  self.logger:log(msg)
+end
+
+--- Present a warning to the user.
+-- @string: the warning message
+function Lspc:warn(msg)
+  local warning = 'LSPC Warning: ' .. msg
+  self.logger:log(warning)
+  vis:info(warning)
+end
+
+--- Present an error to the user.
+-- @string: the error message
+function Lspc:err(msg)
+  local warning = 'LSPC Error: ' .. msg
+  self.logger:log(warning)
+  vis:info(warning)
+end
+
+setmetatable(lspc, {__index = Lspc})
 
 return lspc
