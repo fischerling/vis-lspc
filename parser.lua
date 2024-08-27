@@ -1,24 +1,11 @@
--- Copyright (c) 2021-2024 Florian Fischer. All rights reserved.
---
--- This file is part of vis-lspc.
---
--- vis-lspc is free software: you can redistribute it and/or modify it under the
--- terms of the GNU General Public License as published by the Free Software
--- Foundation, either version 3 of the License, or (at your option) any later
--- version.
---
--- vis-lspc is distributed in the hope that it will be useful, but WITHOUT ANY
--- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
--- FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License along with
--- vis-lspc found in the LICENSE file. If not, see <https://www.gnu.org/licenses/>.
---
--- Parse the data send by a language server
+--- Stateful parser for the data send by a language server.
 -- Note the chunks received may not end with the end of a message.
--- In the worst case a data chunk contains two partial messages on at the beginning
--- and one at the end
---- @module parser
+-- In the worst case a data chunk contains two partial messages one
+-- at the beginning and one at the end.
+-- @module parser
+-- @author Florian Fischer
+-- @license GPL-3
+-- @copyright Florian Fischer 2021-2024 
 local parser = {}
 
 local Parser = {}
