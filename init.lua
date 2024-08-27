@@ -25,28 +25,10 @@ if not vis.communicate then
   return {}
 end
 
-local json
-local json_impls = {'json', 'cjson', 'dkjson'}
+-- state of our language server client
+local lspc = dofile(source_path .. 'lspc.lua')
 
--- find a suitable json implementation
-for _, json_impl in ipairs(json_impls) do
-  if vis:module_exist(json_impl) then
-    json = require(json_impl)
-    if not json.encode or not json.decode then
-      json = nil
-    end
-
-    -- found a usable json implementation
-    if json then
-      break
-    end
-  end
-end
-
--- We found no suitable implementation in json_impls -> use our fallback
-if not json then
-  json = dofile(source_path .. 'json.lua')
-end
+lspc.json = dofile(source_path .. 'json.lua')
 
 local jsonrpc = {}
 jsonrpc.error_codes = {
@@ -64,9 +46,6 @@ jsonrpc.error_codes = {
   ContentModified = -32801,
   RequestCancelled = -32800,
 }
-
--- state of our language server client
-local lspc = dofile(source_path .. 'lspc.lua')
 
 -- Forward declaration of lspc_err to use it in capture_cmd
 local lspc_err
@@ -555,7 +534,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     local path = uri_to_path(uri)
     summary = summary .. path .. ':\n'
     for i, edit in ipairs(edits) do
-      summary = summary .. '\t' .. i .. '.: ' .. json.encode(edit) .. '\n'
+      summary = summary .. '\t' .. i .. '.: ' .. lspc.json.encode(edit) .. '\n'
     end
   end
 
@@ -696,7 +675,7 @@ end
 local function ls_rpc(ls, req)
   req.jsonrpc = '2.0'
 
-  local content_part = json.encode(req)
+  local content_part = lspc.json.encode(req)
   local content_len = string.len(content_part)
 
   local header_part = 'Content-Length: ' .. tostring(content_len)
@@ -774,7 +753,7 @@ local function lspc_handle_goto_method_response(req, result)
   -- location is a Location
   local lsp_doc_pos
   if location.uri then
-    lspc.log('Handle location: ' .. json.encode(location))
+    lspc.log('Handle location: ' .. lspc.json.encode(location))
     lsp_doc_pos = {
       textDocument = {uri = location.uri},
       position = {
@@ -784,7 +763,7 @@ local function lspc_handle_goto_method_response(req, result)
     }
     -- location is a LocationLink
   elseif location.targetUri then
-    lspc.log('Handle locationLink: ' .. json.encode(location))
+    lspc.log('Handle locationLink: ' .. lspc.json.encode(location))
     lsp_doc_pos = {
       textDocument = {uri = location.targetUri},
       position = {
@@ -793,7 +772,7 @@ local function lspc_handle_goto_method_response(req, result)
       },
     }
   else
-    lspc_warn('Unknown location type: ' .. json.encode(location))
+    lspc_warn('Unknown location type: ' .. lspc.json.encode(location))
   end
 
   local doc_pos = lsp_doc_pos_to_vis(lsp_doc_pos)
@@ -934,7 +913,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
   local help_header = '--- signature help: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' ..
                           sel.col .. ' ---\n'
 
-  -- local help_msg = json.encode(result)
+  -- local help_msg = lspc.json.encode(result)
   local help_msg = ''
   for _, signature in ipairs(signatures) do
     local sig_msg = signature.label
@@ -1054,7 +1033,7 @@ local function lspc_handle_workspace_configuration_call(ls, params, response)
       end
       t = t[k]
     end
-    table.insert(results, t or json.null)
+    table.insert(results, t or lspc.json.null)
   end
   response.result = results
 end
@@ -1164,7 +1143,7 @@ local function ls_recv_data(ls, data)
   end
 
   for _, msg in ipairs(msgs) do
-    local resp = json.decode(msg)
+    local resp = lspc.json.decode(msg)
     ls_handle_msg(ls, resp)
   end
 end
@@ -1304,7 +1283,7 @@ local function ls_start(ls, init_options)
   local params = {
     processId = vis_pid,
     clientInfo = {name = lspc.name, version = lspc.version},
-    rootUri = json.null,
+    rootUri = lspc.json.null,
     capabilities = lspc.client_capabilites,
   }
 

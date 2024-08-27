@@ -1,3 +1,26 @@
+--- Find or provide a suitable json module for vis-lspc.
+--
+-- @module json
+local json = {}
+
+--- Json modules to use if they are included in LUA_PATH.
+local json_impls = {'json', 'cjson', 'dkjson'}
+
+-- find a suitable json implementation
+for _, json_impl in ipairs(json_impls) do
+  if vis:module_exist(json_impl) then
+    json = require(json_impl)
+    if not json.encode or not json.decode then
+      json = nil
+    end
+
+    -- found a usable json implementation
+    if json then
+      return json
+    end
+  end
+end
+
 --[[ json.lua
 
 A compact pure-Lua JSON library.
@@ -43,10 +66,6 @@ If you have control over the data and are using Lua, I would recommend just
 avoiding null values in your data to begin with.
 
 --]]
-
-
-local json = {}
-
 
 -- Internal functions.
 
