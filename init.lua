@@ -256,7 +256,7 @@ local function lspc_select(choices)
   if lspc.menu_cmd:sub(0, 8) == 'vis-menu' then
     status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
   else
-    local menu = io.popen(cmd)
+    local menu = assert(io.popen(cmd))
     output = menu:read('*a')
     local _, _, _status = menu:close()
     status = _status
