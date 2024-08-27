@@ -78,11 +78,6 @@ do
 end
 assert(vis_pid)
 
--- check if fzf is available and use fzf instead of vis-menu per default
-if os.execute('type fzf >/dev/null 2>/dev/null') then
-  lspc.menu_cmd = 'fzf'
-end
-
 -- mapping function between vis lexer names and LSP languageIds
 local function syntax_to_languageId(syntax)
   -- LuaFormatter off

@@ -56,9 +56,11 @@ local lspc = {
   },
 }
 
---
---- ClientCapabilities we tell the language server when calling "initialize"
---
+-- check if fzf is available and use fzf instead of vis-menu per default
+if os.execute('type fzf >/dev/null 2>/dev/null') then
+  lspc.menu_cmd = 'fzf'
+end
+
 local supported_markup_kind = {'markdown'}
 
 local goto_methods_capabilities = {
@@ -66,6 +68,7 @@ local goto_methods_capabilities = {
   dynamicRegistration = false,
 }
 
+--- ClientCapabilities we tell the language server when calling "initialize".
 local client_capabilites = {
   workspace = {
     configuration = true,
