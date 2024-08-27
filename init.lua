@@ -1,4 +1,4 @@
--- Copyright (c) 2021-2023 Florian Fischer. All rights reserved.
+-- Copyright (c) 2021-2024 Florian Fischer. All rights reserved.
 --
 -- This file is part of vis-lspc.
 --
@@ -15,19 +15,20 @@
 -- vis-lspc found in the LICENSE file. If not, see <https://www.gnu.org/licenses/>.
 --
 -- We require vis compiled with the communicate patch
-local source_str = debug.getinfo(1, 'S').source:sub(2)
-local source_path = source_str:match('(.*/)')
-
-local parser = dofile(source_path .. 'parser.lua')
-
 if not vis.communicate then
   vis:info('LSPC Error: language server support requires vis communicate patch')
   return {}
 end
 
+local source_str = debug.getinfo(1, 'S').source:sub(2)
+local source_path = source_str:match('(.*/)')
+
 -- state of our language server client
 local lspc = dofile(source_path .. 'lspc.lua')
 
+local parser = dofile(source_path .. 'parser.lua')
+
+-- load a suitable json module
 lspc.json = dofile(source_path .. 'json.lua')
 
 local jsonrpc = {}
