@@ -63,6 +63,23 @@ local function capture_cmd(cmd)
   return s
 end
 
+local vis_supports_pipe_buf = pcall(vis.pipe, vis, 'foo', 'true')
+
+--- Wrapper for the two vis:pipe variants
+-- If vis does not support vis:pipe(input, cmd), prefix the command
+-- with a printf call piping the result to the original command.
+-- @param input The input to pipe to the command
+-- @param cmd The external command to pipe the input to
+local function _vis_pipe(input, cmd, fullscreen)
+  if vis_supports_pipe_buf then
+    return vis:pipe(input, cmd, fullscreen or false)
+  end
+
+  local escaped_input = input:gsub('\'', '\'"\'"\'')
+  cmd = 'printf %s \'' .. escaped_input .. '\' | ' .. cmd
+  return vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+end
+
 -- get vis's pid to pass it to the language servers
 local vis_pid
 do
@@ -249,18 +266,7 @@ local function lspc_select(choices)
     return choices[1]
   end
 
-  local status, output
-  local cmd = 'printf %s \'' .. menu_input:gsub('\'', '\'"\'"\'') .. '\' | ' .. lspc.menu_cmd
-  lspc:log('collect choice using: ' .. cmd)
-
-  if lspc.menu_cmd:sub(0, 8) == 'vis-menu' then
-    status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
-  else
-    local menu = assert(io.popen(cmd))
-    output = menu:read('*a')
-    local _, _, _status = menu:close()
-    status = _status
-  end
+  local status, output = _vis_pipe(menu_input, lspc.menu_cmd)
 
   local choice = nil
   if status == 0 then
@@ -301,7 +307,7 @@ end
 local function lspc_confirm(prompt)
   local choices = 'no\nyes'
 
-  local cmd = 'printf %s \'' .. choices .. '\' | ' .. lspc.confirm_cmd
+  local cmd = lspc.confirm_cmd
 
   if prompt then
     cmd = cmd .. ' -p \'' .. prompt .. '\''
@@ -313,7 +319,7 @@ local function lspc_confirm(prompt)
   -- local _, _, status = menu:close()
 
   local choice = nil
-  local status, output = vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
+  local status, output = _vis_pipe(choices, cmd)
   if status == 0 then
     -- trim newline from selection
     if output:sub(-1) == '\n' then
