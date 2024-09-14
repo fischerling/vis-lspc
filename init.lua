@@ -595,18 +595,19 @@ local function lspc_close_message_win()
   if lspc.show_message == 'message' then
     vis:message('')
     vis:command('q')
-  else
   end
 end
 
 --- Present a message to the user
--- TODO: scroll the message window
 -- TODO: use a dedicated lspc message window
 local function lspc_show_message(msg, hdr, syntax)
   local current_win = vis.win
 
   if lspc.show_message == 'message' then
-    vis:message((hdr or '') .. msg)
+    local to_show = (hdr or '') .. msg .. '\n'
+    vis:message(to_show)
+    vis.win.selection = vis.win.file.size - #to_show
+    vis:feedkeys('zt')
 
   elseif lspc.show_message == 'open' then
     vis:command('open')
