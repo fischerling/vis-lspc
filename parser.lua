@@ -5,7 +5,7 @@
 -- @module parser
 -- @author Florian Fischer
 -- @license GPL-3
--- @copyright Florian Fischer 2021-2024 
+-- @copyright Florian Fischer 2021-2024
 local parser = {}
 
 local Parser = {}

@@ -18,9 +18,9 @@ end
 
 --- Dummy logger class metatable using NOP log functions.
 local DummyLogger = {}
-function DummyLogger:log()
+function DummyLogger.log()
 end
-function DummyLogger:close()
+function DummyLogger.close()
 end
 
 function log.new(name, logging, log_file)
