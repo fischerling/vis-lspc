@@ -430,6 +430,19 @@ local function vis_apply_textEdits(win, file, textEdits)
   win:draw()
 end
 
+--- Close the message window
+-- TODO: close the dedicated lspc message window
+local function lspc_close_message_win()
+  if lspc.show_message == 'message' then
+    vis:message('')
+    vis:command('q')
+  else
+  end
+end
+
+--- Present a message to the user
+-- TODO: scroll the message window
+-- TODO: use a dedicated lspc message window
 local function lspc_show_message(msg, hdr, syntax)
   local current_win = vis.win
 
@@ -485,7 +498,7 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
   local confirmation = lspc_confirm('apply changes:')
 
   -- close summary window
-  vis:command('q')
+  lspc_close_message_win()
 
   if not confirmation then
     return
