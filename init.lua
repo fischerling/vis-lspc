@@ -266,7 +266,8 @@ local function lspc_select(choices)
     return choices[1]
   end
 
-  local status, output = _vis_pipe(menu_input, lspc.menu_cmd)
+  local fullscreen = lspc.menu_cmd == 'fzf'
+  local status, output = _vis_pipe(menu_input, lspc.menu_cmd, fullscreen)
 
   local choice = nil
   if status == 0 then
