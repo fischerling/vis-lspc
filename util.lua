@@ -77,7 +77,7 @@ end
 -- @return the relative path
 function util.get_relative_path(cwd_components, absolute_path_or_components)
   local absolute_components
-  if type(absolute_path_or_components) == "string" then
+  if type(absolute_path_or_components) == 'string' then
     absolute_components = util.split_path_into_components(absolute_path_or_components)
   else
     absolute_components = absolute_path_or_components

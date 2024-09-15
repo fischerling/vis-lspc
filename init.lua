@@ -339,9 +339,6 @@ local function lspc_confirm(prompt)
   end
 
   lspc:log('get confirmation using: ' .. cmd)
-  -- local menu = io.popen(cmd)
-  -- local output = menu:read('*a')
-  -- local _, _, status = menu:close()
 
   local choice = nil
   local status, output = util.vis_pipe(choices, cmd)
