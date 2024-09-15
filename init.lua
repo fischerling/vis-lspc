@@ -31,6 +31,9 @@ lspc.logger = dofile(source_path .. 'log.lua').new('lspc', lspc.logging, lspc.lo
 
 local parser = dofile(source_path .. 'parser.lua')
 
+-- initialise the util module
+local util = dofile(source_path .. 'util.lua').init(lspc)
+
 -- load a suitable json module
 lspc.json = dofile(source_path .. 'json.lua')
 
@@ -51,35 +54,6 @@ jsonrpc.error_codes = {
   RequestCancelled = -32800,
 }
 
--- Helper to execute a command and capture its output
-local function capture_cmd(cmd)
-  local p = assert(io.popen(cmd, 'r'))
-  local s = assert(p:read('*a'))
-  local success, _, status = p:close()
-  if not success then
-    local err = cmd .. ' failed with exit code: ' .. status
-    lspc:err(err)
-  end
-  return s
-end
-
-local vis_supports_pipe_buf = pcall(vis.pipe, vis, 'foo', 'true')
-
---- Wrapper for the two vis:pipe variants
--- If vis does not support vis:pipe(input, cmd), prefix the command
--- with a printf call piping the result to the original command.
--- @param input The input to pipe to the command
--- @param cmd The external command to pipe the input to
-local function _vis_pipe(input, cmd, fullscreen)
-  if vis_supports_pipe_buf then
-    return vis:pipe(input, cmd, fullscreen or false)
-  end
-
-  local escaped_input = input:gsub('\'', '\'"\'"\'')
-  cmd = 'printf %s \'' .. escaped_input .. '\' | ' .. cmd
-  return vis:pipe(vis.win.file, {start = 0, finish = 0}, cmd)
-end
-
 -- get vis's pid to pass it to the language servers
 local vis_pid
 do
@@ -89,7 +63,7 @@ do
     vis_proc_file:close()
 
   else -- fallback if /proc/self/stat
-    local out = capture_cmd('sh -c "echo $PPID"')
+    local out = util.capture_cmd('sh -c "echo $PPID"')
     vis_pid = tonumber(out)
   end
 end
@@ -267,7 +241,7 @@ local function lspc_select(choices)
   end
 
   local fullscreen = lspc.menu_cmd == 'fzf'
-  local status, output = _vis_pipe(menu_input, lspc.menu_cmd, fullscreen)
+  local status, output = util.vis_pipe(menu_input, lspc.menu_cmd, fullscreen)
 
   local choice = nil
   if status == 0 then
@@ -281,115 +255,6 @@ local function lspc_select(choices)
 
   vis:redraw()
   return choice
-end
-
---- Split a path into its components
--- @param path the path to split into components
--- @return a table containing the path components
-local function split_path_into_components(path)
-  local components = {}
-
-  if #path == 1 then
-    return nil
-  end
-
-  -- Skip the initial '/'
-  local start_idx = 2
-
-  while true do
-    local slash = path:find('/', start_idx + 1)
-
-    if slash == nil then
-      table.insert(components, path:sub(start_idx, #path))
-      return components
-    else
-      table.insert(components, path:sub(start_idx, slash - 1))
-      start_idx = slash + 1
-    end
-  end
-end
-
---- Get a path relative to the current working directory
--- @param cwd_components Table of the path components of the CWD
--- @param absolute_components table of the path components of the absolute path
--- @return the relative path
-local function get_relative_path(cwd_components, absolute_components)
-  for idx = 1, #cwd_components do
-    local cwd = cwd_components[idx]
-    local absolute = absolute_components[idx]
-
-    if cwd ~= absolute then
-      local dir = ''
-
-      -- Atleast the first component must match for us to convert
-      -- it to a relative path
-      if idx ~= 1 then
-        for _ = idx, #cwd_components do
-          dir = dir .. '..' .. '/'
-        end
-
-        -- Skip trailing '/'
-        dir = dir:sub(1, #dir - 1)
-      end
-
-      for i = idx, #absolute_components do
-        dir = dir .. '/' .. absolute_components[i]
-      end
-
-      return dir
-    end
-  end
-
-  -- cwd shorter than absolute path
-  local dir = ''
-
-  for i = #cwd_components + 1, #absolute_components do
-    dir = dir .. '/' .. absolute_components[i]
-  end
-
-  -- Skip leading '/'
-  return dir:sub(2)
-end
-
---- Create an iterator yielding the nth line of a file
---
--- @param path The path to the file
-local function file_line_iterator_to_n(path)
-  local file = assert(io.open(path, 'r'))
-  local lines = file:lines()
-  local last_line = nil
-  local last_n = 1
-
-  return function(n)
-    if n == -1 then
-      file:close()
-      return nil
-    end
-
-    if n < last_n then
-      -- We might have multiple references on the same line, so we can
-      -- get called again with the previous line number
-      if (n + 1) == last_n then
-        return last_line
-      end
-
-      return nil
-    end
-
-    for line in lines do
-      if n == last_n then
-        last_n = last_n + 1
-        last_line = line
-
-        return line
-      end
-
-      last_n = last_n + 1
-    end
-
-    -- Iterator exhausted
-    return nil
-  end
 end
 
 local function lspc_select_location(locations)
@@ -414,9 +279,9 @@ local function lspc_select_location(locations)
   end
 
   local choices = {}
-  local cwd_components = capture_cmd('pwd')
+  local cwd_components = util.capture_cmd('pwd')
   -- Strip trailing newline
-  cwd_components = split_path_into_components(cwd_components:sub(1, #cwd_components - 1))
+  cwd_components = util.split_path_into_components(cwd_components:sub(1, #cwd_components - 1))
 
   for _, path in ipairs(collected) do
     -- Sort positions
@@ -424,7 +289,7 @@ local function lspc_select_location(locations)
       return a['position'].line < b['position'].line
     end)
 
-    local rel_path = get_relative_path(cwd_components, split_path_into_components(path))
+    local rel_path = util.get_relative_path(cwd_components, path)
     -- Use the already open file if present to get accurate line content for references
     local line_iter
     if lspc.open_files[path] ~= nil then
@@ -436,7 +301,7 @@ local function lspc_select_location(locations)
         return lspc.open_files[path].file.lines[n]
       end
     else
-      line_iter = file_line_iterator_to_n(path)
+      line_iter = util.file_line_iterator_to_n(path)
     end
 
     for _, val in ipairs(collected[path]) do
@@ -479,7 +344,7 @@ local function lspc_confirm(prompt)
   -- local _, _, status = menu:close()
 
   local choice = nil
-  local status, output = _vis_pipe(choices, cmd)
+  local status, output = util.vis_pipe(choices, cmd)
   if status == 0 then
     -- trim newline from selection
     if output:sub(-1) == '\n' then
