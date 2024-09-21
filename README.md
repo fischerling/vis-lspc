@@ -103,8 +103,8 @@ Alternatively, a plugin manager like [vis-plug](https://github.com/erf/vis-plug)
 	# development support
 	lspc-hover - hover over the current line
 	lspc-show-diagnostics - show the available diagnostics of the current line
-	lspc-next-diagnostics - jump to the next available diagnostic
-	lspc-prev-diagnostics - jump to the previous available diagnostic
+	lspc-next-diagnostic - jump to the next available diagnostic
+	lspc-prev-diagnostic - jump to the previous available diagnostic
 
 ### Available configuration options
 
