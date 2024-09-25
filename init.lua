@@ -1169,7 +1169,7 @@ end
 -- close the file if associated with the language server
 local function lspc_close(ls, file)
   if not ls_is_file_opened(ls, file) then
-    return file.path .. ' not open in ' .. ls.name
+    return (file.path or '[No Name]') .. ' not open in ' .. ls.name
   end
   ls_send_notification(ls, 'textDocument/didClose', {
     textDocument = {uri = path_to_uri(file.path)},
