@@ -1745,6 +1745,17 @@ vis.events.subscribe(lspc.events.LS_INITIALIZED, function(ls)
   end
 end)
 
+vis.events.subscribe(vis.events.QUIT, function()
+  for _, ls in pairs(lspc.running) do
+    -- attempt to gracefully shutdown the language server
+    ls:shutdown()
+    -- close the fd handle to terminate the subprocess because
+    -- a potential method response from the server will not be read after the
+    -- QUIT event
+    ls.fd:close()
+  end
+end)
+
 vis:option_register('lspc-highlight-diagnostics', 'string', function(value)
   lspc.highlight_diagnostics = value
   return true
