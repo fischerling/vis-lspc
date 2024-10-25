@@ -1229,7 +1229,7 @@ local function ls_shutdown(ls)
 end
 
 local function ls_start(ls, init_options)
-  ls.fd = vis:communicate(ls.name, ls.cmd)
+  ls.fd = vis:communicate(ls.name, 'exec ' .. ls.cmd)
 
   -- register the response handler
   vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, event, code, msg)
