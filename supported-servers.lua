@@ -62,4 +62,8 @@ return {
   -- go (gopls)
   -- https://github.com/golang/tools/tree/master/gopls
   go = {name = 'go', cmd = 'gopls'},
+
+  -- bash (bash-language-server)
+  -- https://github.com/bash-lsp/bash-language-server
+  bash = {name = 'bash-language-server', cmd = 'bash-language-server start'},
 }
