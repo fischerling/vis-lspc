@@ -74,4 +74,8 @@ return {
   -- css (css-language-server)
   -- https://github.com/hrsh7th/vscode-langservers-extracted
   css = {name = 'css-language-server', cmd = 'vscode-css-language-server --stdio'},
+
+  -- json (json-language-server)
+  -- https://github.com/hrsh7th/vscode-langservers-extracted
+  json = {name = 'json-language-server', cmd = 'vscode-json-language-server --stdio'},
 }
