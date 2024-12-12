@@ -66,4 +66,8 @@ return {
   -- bash (bash-language-server)
   -- https://github.com/bash-lsp/bash-language-server
   bash = {name = 'bash-language-server', cmd = 'bash-language-server start'},
+
+  -- html (html-language-server)
+  -- https://github.com/hrsh7th/vscode-langservers-extracted
+  html = {name = 'html-language-server', cmd = 'vscode-html-language-server --stdio'},
 }
