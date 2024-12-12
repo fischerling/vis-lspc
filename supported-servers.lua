@@ -69,13 +69,22 @@ return {
 
   -- html (html-language-server)
   -- https://github.com/hrsh7th/vscode-langservers-extracted
-  html = {name = 'html-language-server', cmd = 'vscode-html-language-server --stdio'},
-  
+  html = {
+    name = 'html-language-server',
+    cmd = 'vscode-html-language-server --stdio',
+  },
+
   -- css (css-language-server)
   -- https://github.com/hrsh7th/vscode-langservers-extracted
-  css = {name = 'css-language-server', cmd = 'vscode-css-language-server --stdio'},
+  css = {
+    name = 'css-language-server',
+    cmd = 'vscode-css-language-server --stdio',
+  },
 
   -- json (json-language-server)
   -- https://github.com/hrsh7th/vscode-langservers-extracted
-  json = {name = 'json-language-server', cmd = 'vscode-json-language-server --stdio'},
+  json = {
+    name = 'json-language-server',
+    cmd = 'vscode-json-language-server --stdio',
+  },
 }
