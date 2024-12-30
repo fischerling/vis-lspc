@@ -23,6 +23,35 @@ end
 function DummyLogger.close()
 end
 
+--- Logger that initialises itself on first use
+local LazyInitLogger = {}
+function LazyInitLogger:log(first_msg)
+  self.logger = log.new(self.name, self.conf.logging, self.conf.log_file)
+  self.log = function(lazyLogger, msg)
+    lazyLogger.logger:log(msg)
+  end
+  self.logger:log(first_msg)
+end
+function LazyInitLogger:close()
+  self.logger:close()
+end
+
+--- Create a new lazily initializing logger
+--
+-- The created logger will initialize itself using log.new on first use.
+-- The logging and log_file fields of the conf table are passed to log.new.
+-- @param name The name of the logger
+-- @param conf Table containing logging and log_file members
+function log.lazyNew(name, conf)
+  local logger = {name = name, conf = conf}
+  setmetatable(logger, {__index = LazyInitLogger})
+  return logger
+end
+
+--- Create a new named logger
+-- @param name The name of the logger
+-- @param logging Is logging enabled
+-- @param log_file File path to the log file to use
 function log.new(name, logging, log_file)
   local logger = {name = name, log_fd = nil}
 

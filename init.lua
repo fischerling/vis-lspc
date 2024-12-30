@@ -27,7 +27,7 @@ local source_path = source_str:match('(.*/)')
 local lspc = dofile(source_path .. 'lspc.lua')
 
 -- initialise the logging system
-lspc.logger = dofile(source_path .. 'log.lua').new('lspc', lspc.logging, lspc.log_file)
+lspc.logger = dofile(source_path .. 'log.lua').lazyNew('lspc', lspc)
 
 local parser = dofile(source_path .. 'parser.lua')
 
