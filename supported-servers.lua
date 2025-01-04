@@ -27,6 +27,7 @@ local typescript = {
 }
 
 return {
+  c = clangd,
   cpp = clangd,
   ansi_c = clangd,
   -- pylsp (python-lsp-server) language server configuration
