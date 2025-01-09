@@ -12,7 +12,7 @@ while read -r glob; do
     cd "$BASEDIR"
 
     while [ "$PWD" != "/" ]; do
-        set -- $glob
+        set -- "$glob"
 
         if [ -e "$1" ]; then
             echo "$PWD"

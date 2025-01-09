@@ -7,6 +7,9 @@
 -- @copyright 2024 git-bruh <prathamIN@proton.me>
 local util = {}
 
+local source_str = debug.getinfo(1, 'S').source:sub(2)
+local source_path = source_str:match('(.*/)')
+
 local lspc
 
 function util.init(lspc_)
@@ -159,6 +162,20 @@ function util.file_line_iterator_to_n(path)
     -- Iterator exhausted
     return nil
   end
+end
+
+--- Find file based on globs in the parent file system tree
+-- @param globs a new line separated string of file globs
+-- @param start the starting path
+function util.find_upwards(globs, start)
+  local status, out = vis:pipe(globs, source_path .. '/tools/find-upwards "' .. start .. '"')
+
+  if status ~= 0 then
+    return nil
+  end
+
+  -- Skip trailing newline
+  return out:sub(1, #out - 1)
 end
 
 return util

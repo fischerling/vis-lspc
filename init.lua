@@ -1255,25 +1255,24 @@ function LanguageServer:shutdown()
   self:call_method('shutdown')
 end
 
-local function get_root_path(ls, file_path)
+--- Find the root project URI for a specific file
+-- @param ls the language server
+-- @param file_path the path to the file to find the root project of
+-- @return the URI of the root project or nil if none was found
+local function find_root_uri(ls, file_path)
   local globs = ''
 
-  if ls.roots then
-    for _, glob in ipairs(ls.roots) do
+  local roots = ls.roots
+  if roots then
+    for _, glob in ipairs(roots) do
       globs = globs .. glob .. '\n'
     end
   end
 
   globs = globs .. '.git\n.hg\n'
 
-  local status, out = vis:pipe(globs, source_path .. '/tools/find-root "' .. file_path .. '"')
-
-  if status ~= 0 then
-    return nil
-  end
-
-  -- Skip trailing newline
-  return out:sub(1, #out - 1)
+  local root_path = util.find_upwards(globs, file_path)
+  return root_path and path_to_uri(root_path)
 end
 
 local function ls_start(ls, init_options)
@@ -1307,7 +1306,7 @@ local function ls_start(ls, init_options)
   local params = {
     processId = vis_pid,
     clientInfo = {name = lspc.name, version = lspc.version},
-    rootUri = (vis.win.file and path_to_uri(get_root_path(ls, vis.win.file.path))) or lspc.json.null,
+    rootUri = (vis.win.file and find_root_uri(ls, vis.win.file.path)) or lspc.json.null,
     capabilities = lspc.client_capabilites,
   }
 
@@ -1323,13 +1322,13 @@ function LanguageServer.new(ls_conf)
     name = ls_conf.name,
     cmd = ls_conf.cmd,
     settings = ls_conf.settings,
+    roots = ls_conf.roots,
     formatting_options = ls_conf.formatting_options,
     initialized = false,
     id = 0,
     inflight = {},
     parser = parser.new(),
     capabilities = {},
-    roots = ls_conf.roots,
   }
   setmetatable(ls, {__index = LanguageServer})
 
