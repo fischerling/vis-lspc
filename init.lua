@@ -647,8 +647,12 @@ local function lspc_highlight_diagnostics(win, diagnostics, style)
   end
 end
 
--- send a rpc message to a language server
-local function ls_rpc(ls, req)
+--- LanguageServer class metatable
+local LanguageServer = {}
+
+--- send a RPC message to the language server
+-- @param req The request to send
+function LanguageServer:rpc(req)
   req.jsonrpc = '2.0'
 
   local content_part = lspc.json.encode(req)
@@ -656,18 +660,22 @@ local function ls_rpc(ls, req)
 
   local header_part = 'Content-Length: ' .. tostring(content_len)
   local msg = header_part .. '\r\n\r\n' .. content_part
-  lspc:log('LSPC Sending -> ' .. ls.name .. ': ' .. msg)
+  lspc:log('LSPC Sending -> ' .. self.name .. ': ' .. msg)
 
-  ls.fd:write(msg)
-  ls.fd:flush()
+  self.fd:write(msg)
+  self.fd:flush()
 end
 
--- send a rpc notification to a language server
-local function ls_send_notification(ls, method, params)
-  ls_rpc(ls, {method = method, params = params})
+--- Send a RPC notification to the language server
+-- @param name the name of the notification
+-- @param params the parameters to send
+function LanguageServer:send_notification(name, params)
+  self:rpc({method = name, params = params})
 end
 
-local function ls_send_did_change(ls, file)
+--- Send a textDocument/didChange notification to the language server
+-- @param the vis file object which changed
+function LanguageServer:send_did_change(file)
   lspc:log('send didChange')
   local new_version = assert(lspc.open_files[file.path]).version + 1
   lspc.open_files[file.path].version = new_version
@@ -675,37 +683,45 @@ local function ls_send_did_change(ls, file)
   local document = {uri = path_to_uri(file.path), version = new_version}
   local changes = {{text = file:content(0, file.size)}}
   local params = {textDocument = document, contentChanges = changes}
-  ls_send_notification(ls, 'textDocument/didChange', params)
+  self:send_notification('textDocument/didChange', params)
 end
 
--- send a rpc method call to a language server
-local function ls_call_method(ls, method, params, win, ctx)
-  local id = ls.id
-  ls.id = ls.id + 1
+--- Send a rpc method call to the language server.
+-- @param method name of remote procedure to call
+-- @param params the parameter passed to the remote procedure
+-- @param win the related vis window object
+-- @param ctx a opaque context value stored with the request
+function LanguageServer:call_method(method, params, win, ctx)
+  local id = self.id
+  self.id = self.id + 1
 
   local req = {id = id, method = method, params = params}
-  ls.inflight[id] = req
+  self.inflight[id] = req
 
-  ls_rpc(ls, req)
+  self:rpc(req)
   -- remember the current window to apply the effects of a
   -- method call in the original window
-  ls.inflight[id].win = win
+  self.inflight[id].win = win
 
   -- remember the user provided ctx value
   -- ctx can be used to remember arbitrary data from method invocation till
   -- method response handling
   -- The goto-location methods remember in ctx how to open the location
-  ls.inflight[id].ctx = ctx
+  self.inflight[id].ctx = ctx
 end
 
--- call textDocument/<method> and send a didChange notification upfront
--- to make sure the server sees our current state.
--- This is not ideal since we are sending more data than needed and
--- the  server has less time to parse the new file content and do its work
+--- Call textDocument/<method> of the server
+-- We send a didChange notification upfront to make sure the server sees our
+-- current state. This is not ideal since we are sending more data than needed
+-- and the server has less time to parse the new file content and do its work
 -- resulting in longer stalls after method invocation.
-local function ls_call_text_document_method(ls, method, params, win, ctx)
-  ls_send_did_change(ls, win.file)
-  ls:call_method('textDocument/' .. method, params, win, ctx)
+-- @param method the name of LSP textDocument method
+-- @param params the parameters of the method call
+-- @param win the related vis window object
+-- @param ctx a opaque context value stored with the request
+function LanguageServer:call_text_document_method(method, params, win, ctx)
+  self:send_did_change(win.file)
+  self:call_method('textDocument/' .. method, params, win, ctx)
 end
 
 local function lspc_handle_goto_method_response(req, result)
@@ -906,7 +922,7 @@ end
 
 local function lspc_handle_rename_method_response(win, result)
   -- result must always be valid because otherwise we would caught the error
-  -- in ls_handle_method_response
+  -- in LanguageServer:handle_method_response
   vis_apply_workspaceEdit(win, win.file, result)
 end
 
@@ -923,13 +939,13 @@ local function lspc_handle_initialize_response(ls, result)
 
   local params = {}
   setmetatable(params, {__jsontype = 'object'})
-  ls_send_notification(ls, 'initialized', params)
+  ls:send_notification('initialized', params)
 
   -- According to nvim-lspconfig sendig the lsp server settings shortly after
-  -- initialization is a undocumented convention.
+  -- initialization is an undocumented convention.
   -- See https://github.com/neovim/nvim-lspconfig/blob/ed88435764d8b00442e66d39ec3d9c360e560783/CONTRIBUTING.md
   if ls.settings then
-    ls_send_notification(ls, 'workspace/didChangeConfiguration', {
+    ls:send_notification('workspace/didChangeConfiguration', {
       settings = ls.settings,
     })
   end
@@ -937,8 +953,10 @@ local function lspc_handle_initialize_response(ls, result)
   vis.events.emit(lspc.events.LS_INITIALIZED, ls)
 end
 
--- method response dispatcher
-local function ls_handle_method_response(ls, method_response, req)
+--- Dispatch method response from the server
+-- @param method_response the response send from the server
+-- @param req the request causing this response
+function LanguageServer:handle_method_response(method_response, req)
   local win = req.win
 
   local method = req.method
@@ -964,7 +982,7 @@ local function ls_handle_method_response(ls, method_response, req)
     lspc_handle_goto_method_response(req, result)
 
   elseif method == 'initialize' then
-    lspc_handle_initialize_response(ls, result)
+    lspc_handle_initialize_response(self, result)
 
   elseif method == 'textDocument/completion' then
     lspc_handle_completion_method_response(win, result, req.ctx)
@@ -982,12 +1000,12 @@ local function ls_handle_method_response(ls, method_response, req)
     lspc_handle_formatting_method_response(win, result)
 
   elseif method == 'shutdown' then
-    ls_send_notification(ls, 'exit')
-    ls.fd:close()
+    self:send_notification('exit')
+    self.fd:close()
 
     -- remove the ls from lspc.running
     for ls_name, rls in pairs(lspc.running) do
-      if ls == rls then
+      if self == rls then
         lspc.running[ls_name] = nil
         break
       end
@@ -996,7 +1014,7 @@ local function ls_handle_method_response(ls, method_response, req)
     lspc:warn('received unknown method ' .. method)
   end
 
-  ls.inflight[method_response.id] = nil
+  self.inflight[method_response.id] = nil
 end
 
 local function lspc_handle_workspace_configuration_call(ls, params, response)
@@ -1014,11 +1032,13 @@ local function lspc_handle_workspace_configuration_call(ls, params, response)
   response.result = results
 end
 
-local function ls_handle_method_call(ls, method_call)
+--- Handle a method call from the server
+-- @param method_call the received method call
+function LanguageServer:handle_method_call(method_call)
   local method = method_call.method
   local response = {id = method_call.id}
   if method == 'workspace/configuration' then
-    lspc_handle_workspace_configuration_call(ls, method_call.params, response)
+    lspc_handle_workspace_configuration_call(self, method_call.params, response)
   else
     lspc:log('Unknown method call ' .. method)
     response['error'] = {
@@ -1026,7 +1046,7 @@ local function ls_handle_method_call(ls, method_call)
       message = method .. ' not implemented',
     }
   end
-  ls_rpc(ls, response)
+  self:rpc(response)
 end
 
 -- save the diagnostics received for a file uri
@@ -1073,32 +1093,37 @@ local function lspc_handle_show_message(show_message_params)
   vis:message(level .. ': ' .. show_message_params.message)
 end
 
-local function ls_handle_notification(ls, notification) -- luacheck: no unused args
+--- Handle a notification received from the server
+-- @param notification the received notification
+function LanguageServer:handle_notification(notification)
   local method = notification.method
   if method == 'textDocument/publishDiagnostics' then
-    lspc_handle_publish_diagnostics(ls, notification.params.uri, notification.params.diagnostics)
+    lspc_handle_publish_diagnostics(self, notification.params.uri, notification.params.diagnostics)
   elseif method == 'window/showMessage' then
     lspc_handle_show_message(notification.params)
   end
 end
 
--- dispatch between a method call and a message response
--- for a message response we have a req remembered in the inflight table
-local function ls_handle_method(ls, method)
-  local req = ls.inflight[method.id]
+--- Dispatch between a method call and a message response
+-- Those are distinquiable because for a message response we have a req
+-- remembered in the inflight table
+-- @param method the method message received from the server
+function LanguageServer:handle_method(method)
+  local req = self.inflight[method.id]
   if req and not method.method then
-    ls_handle_method_response(ls, method, req)
+    self:handle_method_response(method, req)
   else
-    ls_handle_method_call(ls, method)
+    self:handle_method_call(method)
   end
 end
 
--- dispatch between a method call/response and a notification from the server
-local function ls_handle_msg(ls, response)
-  if response.id then
-    ls_handle_method(ls, response)
+--- Dispatch between a method call/response and a notification from the server
+-- @param msg the message received from the server
+function LanguageServer:handle_msg(msg)
+  if msg.id then
+    self:handle_method(msg)
   else
-    ls_handle_notification(ls, response)
+    self:handle_notification(msg)
   end
 end
 
@@ -1106,21 +1131,21 @@ end
 -- Note the chunks received may not end with the end of a message.
 -- In the worst case a data chunk contains two partial messages on at the beginning
 -- and one at the end
-local function ls_recv_data(ls, data)
-  local err = ls.parser:add(data)
+function LanguageServer:recv_data(data)
+  local err = self.parser:add(data)
   if err then
     lspc:err(err)
     return
   end
 
-  local msgs = ls.parser:get_msgs()
+  local msgs = self.parser:get_msgs()
   if not msgs then
     return
   end
 
   for _, msg in ipairs(msgs) do
     local resp = lspc.json.decode(msg)
-    ls_handle_msg(ls, resp)
+    self:handle_msg(resp)
   end
 end
 
@@ -1161,17 +1186,19 @@ local function lspc_new_file_handle(file)
   return {file = file, version = 0, diagnostics = {}, language_servers = {}}
 end
 
--- detect if a file is already opened in a language server
-local function ls_is_file_opened(ls, file)
-  return lspc.open_files[file.path] and lspc.open_files[file.path].language_servers[ls]
+--- Detect if a file is already opened by the language server
+-- @param file the vis file object to check
+-- @return true if the file is already opened by the language server
+function LanguageServer:is_file_opened(file)
+  return lspc.open_files[file.path] and lspc.open_files[file.path].language_servers[self]
 end
 
 -- close the file if associated with the language server
 local function lspc_close(ls, file)
-  if not ls_is_file_opened(ls, file) then
+  if not ls:is_file_opened(file) then
     return (file.path or '[No Name]') .. ' not open in ' .. ls.name
   end
-  ls_send_notification(ls, 'textDocument/didClose', {
+  ls:send_notification('textDocument/didClose', {
     textDocument = {uri = path_to_uri(file.path)},
   })
   lspc.open_files[file.path].language_servers[ls] = nil
@@ -1184,7 +1211,7 @@ end
 -- A file must be opened before any textDocument functions can be used with it.
 local function lspc_open(ls, win, file)
   -- already opened
-  if ls_is_file_opened(ls, file) then
+  if ls:is_file_opened(file) then
     return file.path .. ' already open in ' .. ls.name
   end
 
@@ -1201,7 +1228,7 @@ local function lspc_open(ls, win, file)
     },
   }
 
-  ls_send_notification(ls, 'textDocument/didOpen', params)
+  ls:send_notification('textDocument/didOpen', params)
 
   vis.events.subscribe(vis.events.FILE_CLOSE, function(closed_file)
     lspc_close(ls, closed_file)
@@ -1211,9 +1238,9 @@ local function lspc_open(ls, win, file)
   if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) == 'table' and
       ls.capabilities.textDocumentSync.save then
     vis.events.subscribe(vis.events.FILE_SAVE_POST, function(saved_file, path)
-      if ls_is_file_opened(saved_file, ls) then
+      if ls:is_file_opened(saved_file) then
         local did_save_params = {textDocument = {uri = path_to_uri(path)}}
-        ls_send_notification(ls, 'textDocument/didSave', did_save_params)
+        ls:send_notification('textDocument/didSave', did_save_params)
       end
     end)
   end
@@ -1221,11 +1248,11 @@ local function lspc_open(ls, win, file)
   vis.events.emit(lspc.events.LS_DID_OPEN, ls, file)
 end
 
--- Initiate the shutdown of a language server
+--- Initiate the shutdown of the language server
 -- Sending the exit notification and closing the file handle are done in
 -- the shutdown response handler.
-local function ls_shutdown(ls)
-  ls:call_method('shutdown')
+function LanguageServer:shutdown()
+  self:call_method('shutdown')
 end
 
 local function get_root_path(ls, file_path)
@@ -1274,7 +1301,7 @@ local function ls_start(ls, init_options)
       return
     end
 
-    ls_recv_data(ls, msg)
+    ls:recv_data(msg)
   end)
 
   local params = {
@@ -1291,7 +1318,7 @@ local function ls_start(ls, init_options)
   ls:call_method('initialize', params)
 end
 
-local function new_ls(ls_conf)
+function LanguageServer.new(ls_conf)
   local ls = {
     name = ls_conf.name,
     cmd = ls_conf.cmd,
@@ -1303,13 +1330,8 @@ local function new_ls(ls_conf)
     parser = parser.new(),
     capabilities = {},
     roots = ls_conf.roots,
-
-    -- exported methods of a language server
-    send_notification = ls_send_notification,
-    send_did_change = ls_send_did_change,
-    call_method = ls_call_method,
-    shutdown = ls_shutdown,
   }
+  setmetatable(ls, {__index = LanguageServer})
 
   return ls
 end
@@ -1335,7 +1357,7 @@ local function lspc_start_server(syntax)
     return nil, 'Already a language server running for ' .. syntax
   end
 
-  local ls = new_ls(ls_conf)
+  local ls = LanguageServer.new(ls_conf)
   lspc.running[ls_conf.name] = ls
   ls_start(ls, ls_conf.init_options)
 
@@ -1350,7 +1372,7 @@ local function lspc_method_doc_pos(ls, method, win, argv, additional_params)
     return 'language server ' .. ls.name .. ' does not provide ' .. method
   end
 
-  if not ls_is_file_opened(ls, win.file) then
+  if not ls:is_file_opened(win.file) then
     lspc_open(ls, win, win.file)
   end
 
@@ -1361,7 +1383,7 @@ local function lspc_method_doc_pos(ls, method, win, argv, additional_params)
     end
   end
 
-  ls_call_text_document_method(ls, method, params, win, argv)
+  ls:call_text_document_method(method, params, win, argv)
 end
 
 local lspc_goto_location_methods = {
@@ -1580,14 +1602,14 @@ vis:command_register('lspc-rename', function(argv, _, win)
     return
   end
 
-  if not ls_is_file_opened(ls, win.file.path) then
+  if not ls:is_file_opened(win.file.path) then
     lspc_open(ls, win, win.file)
   end
 
   local params = vis_doc_pos_to_lsp(vis_get_doc_pos(win))
   params.newName = new_name
 
-  ls_call_text_document_method(ls, 'rename', params, win)
+  ls:call_text_document_method('rename', params, win)
 end)
 
 vis:command_register('lspc-format', function(argv, _, win)
@@ -1619,7 +1641,7 @@ vis:command_register('lspc-format', function(argv, _, win)
     }
   end
 
-  ls_call_text_document_method(ls, 'formatting', params, win)
+  ls:call_text_document_method('formatting', params, win)
 end)
 
 vis:command_register('lspc-completion', function(argv, _, win)
@@ -1757,7 +1779,7 @@ vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
     return
   end
   for ls in pairs(file_handle.language_servers) do
-    ls_send_did_change(ls, file)
+    ls:send_did_change(file)
   end
 end)
 
