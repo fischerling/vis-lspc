@@ -122,10 +122,13 @@ Available options are:
 * `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
 * `ls_map` - a table mapping `vis` syntax names to language server configurations
 * `highlight_diagnostics = 'line'` - highlight the `range` or `line`number of available diagnostics
-* `workspace_edit_remember_cursor = true` - restore the primary cursor position after a workspaceEdit
+* `diagnostic_style_id = nil` - vis style id used to highlight diagnostics, win.STYLE_LEXER_MAX is used by default
 * `diagnostic_styles = { error = 'back:red', warning = 'back:yellow', information = 'back:yellow', hint = 'back:yellow', }` - styles used to highlight different diagnostics
-* `show_message = 'message'` - how to present information. `'message'`: use `vis:message`; `'open'`: use a new window supporting syntax highlighting.
+* `workspace_edit_remember_cursor = true` - restore the primary cursor position after a workspaceEdit
 * `message_level = 3` - the level of shown messages retrieved via `window/showMessage` notifications
+* `show_message = 'message'` - how to present information. `'message'`: use `vis:message`; `'open'`: use a new window supporting syntax highlighting.
+* `universal_root_globs = {}` - Globs to consider as workspace root for any language server (e.g. `*.git` or `*.hg`).
+* `fallback_dirname_as_root = false` - If set to true a file's directory is used as workspace root if no explicit root was found.
 
 #### Configure your own Language Server
 
@@ -162,6 +165,19 @@ ls_map.lua = {
 ```
 
 Language servers configured in `vis-lspc` can be found in `supported_servers.lua`.
+
+### Workspace Detection
+
+During server initialization an URI to the root of the workspace (a folder opened by the editor) can be passed to the server.
+Workspaces are used to implement certain project wide [features](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_symbol).
+
+Since vis has no sense of folders and I think it is the job of each individual language server to detect the root of language idiomatic projects, workspace root detection is only activated for certain language servers by default.
+
+If you want to use some universal criteria to detect project roots, like always using a file's directory or considering all source-control repositories as projects you can use the configuration options `universal_root_globs` and `fallback_dirname_as_root`.
+
+Additionally, you can configure globs to detect a project's root for each language server using the `roots` member in its `ls_map` table entry.
+
+For example `roots = {'compile_commands.json', '.clangd'}` is used to detect the project root for clangd.
 
 ### Events
 

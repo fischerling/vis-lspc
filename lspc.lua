@@ -19,7 +19,7 @@ local lspc = {
   -- automatically start a language server when a new window is opened
   autostart = true,
   -- program used to let the user make choices
-  -- The available choices are pass to <menu_cmd> on stdin separated by '\n'
+  -- The available choices are passed to <menu_cmd> on stdin separated by '\n'
   menu_cmd = 'vis-menu -l 10',
   -- program used to ask the user for confirmation
   confirm_cmd = 'vis-menu',
@@ -48,6 +48,12 @@ local lspc = {
   -- How to present messages to the user.
   -- 'message': use vis:message; 'open': use a new split window allowing for syntax highlighting
   show_message = 'message',
+
+  -- Globs that are considered to be workspace roots (e.g. ".git" or ".hg")
+  universal_root_globs = {},
+
+  -- Should a file's directory be used as workspace root if no explicit root was found.
+  fallback_dirname_as_root = false,
 
   -- events
   events = {

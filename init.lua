@@ -1262,16 +1262,23 @@ end
 local function find_root_uri(ls, file_path)
   local globs = ''
 
-  local roots = ls.roots
+  local roots = ls.conf.roots
   if roots then
     for _, glob in ipairs(roots) do
       globs = globs .. glob .. '\n'
     end
   end
 
-  globs = globs .. '.git\n.hg\n'
+  if lspc.universal_root_globs then
+    for _, glob in ipairs(lspc.universal_root_globs) do
+      globs = globs .. glob .. '\n'
+    end
+  end
 
   local root_path = util.find_upwards(globs, file_path)
+  if not root_path and lspc.fallback_dirname_as_root then
+    root_path = util.dirname(file_path)
+  end
   return root_path and path_to_uri(root_path)
 end
 

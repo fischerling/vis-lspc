@@ -123,6 +123,13 @@ function util.get_relative_path(cwd_components, absolute_path_or_components)
   return dir:sub(2)
 end
 
+--- Strip the last component from a pathname
+-- @param the pathname
+-- @return the pathname up to the last '/'
+function util.dirname(name)
+  return name:match('(.*[/])')
+end
+
 --- Create an iterator yielding the nth line of a file
 --
 -- @param path The path to the file
