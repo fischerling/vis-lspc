@@ -127,7 +127,27 @@ end
 -- @param the pathname
 -- @return the pathname up to the last '/'
 function util.dirname(name)
-  return name:match('(.*[/])')
+  if name == '.' or name == '..' or name == '/' then
+    return name
+  end
+
+  -- strip a trailing path separator
+  if name:sub(#name, #name) == '/' then
+    name = name:sub(1, #name - 1)
+  end
+
+  local dirname = name:match('(.*)[/]')
+  -- There was no path separator in name.
+  if not dirname then
+    return '.'
+  end
+
+  -- The name started with the root dir.
+  if dirname == '' then
+    return '/'
+  end
+
+  return dirname
 end
 
 --- Create an iterator yielding the nth line of a file
