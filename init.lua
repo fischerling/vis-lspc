@@ -1283,7 +1283,10 @@ local function find_root_uri(ls, file_path)
 end
 
 local function ls_start(ls, init_options)
-  ls.fd = vis:communicate(ls.name, 'exec ' .. ls.cmd)
+  ls.fd = vis:communicate(ls.name, 'exec ' .. ls.conf.cmd)
+
+  -- detect the workspace root
+  ls.rootUri = vis.win.file and find_root_uri(ls, vis.win.file.path)
 
   -- register the response handler
   vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, event, code, msg)
@@ -1313,7 +1316,7 @@ local function ls_start(ls, init_options)
   local params = {
     processId = vis_pid,
     clientInfo = {name = lspc.name, version = lspc.version},
-    rootUri = (vis.win.file and find_root_uri(ls, vis.win.file.path)) or lspc.json.null,
+    rootUri = ls.rootUri or lspc.json.null,
     capabilities = lspc.client_capabilites,
   }
 
@@ -1327,10 +1330,8 @@ end
 function LanguageServer.new(ls_conf)
   local ls = {
     name = ls_conf.name,
-    cmd = ls_conf.cmd,
-    settings = ls_conf.settings,
-    roots = ls_conf.roots,
-    formatting_options = ls_conf.formatting_options,
+    conf = ls_conf,
+
     initialized = false,
     id = 0,
     inflight = {},
@@ -1638,7 +1639,7 @@ vis:command_register('lspc-format', function(argv, _, win)
 
   local params = {
     textDocument = {uri = path_to_uri(win.file.path)},
-    options = ls.formatting_options,
+    options = ls.conf.formatting_options,
   }
   if params.options == nil then
     params.options = {
