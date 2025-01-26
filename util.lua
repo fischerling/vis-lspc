@@ -205,4 +205,60 @@ function util.find_upwards(globs, start)
   return out:sub(1, #out - 1)
 end
 
+--- Utility table function
+util.table = {}
+
+--- Recursively copy a table and all its members.
+-- @param tbl the table to copy
+-- @return a deep copy of the table
+function util.table.deep_copy(tbl)
+  local cpy = {}
+  for k, v in pairs(tbl) do
+    if type(v) ~= 'table' then
+      cpy[k] = v
+    else
+      cpy[k] = util.table.deep_copy(v)
+    end
+  end
+
+  for i, v in ipairs(tbl) do
+    if type(v) ~= 'table' then
+      cpy[i] = v
+    else
+      cpy[i] = util.table.deep_copy(v)
+    end
+  end
+  return cpy
+end
+
+--- Recursively merge two tables.
+-- This method modifies the weak table, if this is not intended make sure you
+-- use a deep copy of the weak table.
+-- The members of the strong table override members of the weak one.
+-- @param weak table which's members are potentially overridden
+-- @param strong table which's members override ones from the weak table
+-- @return the merged table
+function util.table.merge(weak, strong)
+  -- merge named members
+  for k, v in pairs(strong) do
+    -- potentially override the weak member
+    if type(v) ~= 'table' then
+      weak[k] = v
+    else
+      weak[k] = util.table.merge(weak[k] or {}, v)
+    end
+  end
+
+  -- merge numbered members
+  for i, v in ipairs(strong) do
+    -- potentially override the weak member
+    if type(v) ~= 'table' then
+      weak[i] = v
+    else
+      weak[i] = util.table.merge(weak[i] or {}, v)
+    end
+  end
+  return weak
+end
+
 return util
