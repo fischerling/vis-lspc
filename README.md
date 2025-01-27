@@ -166,6 +166,22 @@ ls_map.lua = {
 
 Language servers configured in `vis-lspc` can be found in `supported_servers.lua`.
 
+#### Language Server Settings
+
+Language servers can be configured with different mechanisms, all merged together to form the *effective* settings for a language server instance.
+There are three kinds of settings:
+
+1. *Global settings* specified by the user in its `vis` configuration in a language server configuration's `settings` member.
+2. *Project local* settings stored in a `.vis-lspc-settings.json` file along your regular project files.
+3. Settings stored by `vis-lspc` in the `settings.json` file.
+   The *client local* user settings are stored for each language server and each file path.
+   Settings for a more specific file path override settings defined for a parent directory.
+
+The *project* and *client local* settings are indexed by the name of the language server.
+
+All relevant settings are merged to form the *effective* settings passed to the language server.
+More specific settings take precedence before more general ones.
+
 ### Workspace Detection
 
 During server initialization an URI to the root of the workspace (a folder opened by the editor) can be passed to the server.
@@ -206,6 +222,17 @@ lspc_open(win, path, line, col, cmd)
   - `line` - the line to open. (`nil` for no position within the file).
   - `col` - same as `line`, but for the column.
   - `cmd` - `vis` command to open the file. (`e` or `o`, see `vis` commands)
+
+#### `lspc.get_running_ls`
+
+Get a running language server table.
+
+```lua
+get_running_ls(win, explicit_syntax)
+```
+
+  - `win` - a window in which the language server is running
+  - `explicit_syntax` - syntax of the language server if it differs from `win.syntax`
 
 ## License
 
