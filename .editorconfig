@@ -9,3 +9,8 @@ indent_size = 2
 [.gitlab-ci.yml]
 indent_style = space
 indent_size = 2
+
+[tools/*]
+indent_style = space
+indent_size = 4
+binary_next_line = true
