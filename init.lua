@@ -1262,7 +1262,7 @@ end
 local function find_root_uri(ls, file_path)
   local globs = ''
 
-  local roots = ls.conf.roots
+  local roots = ls.roots
   if roots then
     for _, glob in ipairs(roots) do
       globs = globs .. glob .. '\n'
