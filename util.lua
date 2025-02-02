@@ -195,9 +195,10 @@ end
 -- @param globs a new line separated string of file globs
 -- @param start the starting path
 function util.find_upwards(globs, start)
-  local status, out = vis:pipe(globs, source_path .. '/tools/find-upwards "' .. start .. '"')
+  local status, out = util.vis_pipe(globs, '\'' .. source_path:gsub('\'', '\'\\\'\'') ..
+                                        '/tools/find-upwards\' "' .. start .. '"')
 
-  if status ~= 0 then
+  if status ~= 0 or out == nil then
     return nil
   end
 
