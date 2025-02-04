@@ -141,16 +141,17 @@ local function get_selection(win)
 end
 
 -- get the 0-based byte offset from a selection
--- ATTENTION: this function modifies the primary selection so it is not
--- safe to call it for example during WIN_HIGHLIGHT events
-local function vis_sel_to_pos(win, selection)
-  local old_selection = get_selection(win)
-  -- move primary selection
-  win.selection:to(selection.line, selection.col)
-  local pos = win.selection.pos
-  -- restore old primary selection
-  win.selection:to(old_selection.line, old_selection.col)
-  return pos
+local function vis_sel_to_pos(file, sel)
+  local line_count = 0
+  local pos = 0
+  for line in file:lines_iterator() do
+    line_count = line_count + 1
+    if line_count == sel.line then
+      return pos + (sel.col - 1)
+    end
+    pos = pos + #line + 1
+  end
+  return 0
 end
 
 -- get the line and column from a 0-based byte offset
@@ -204,14 +205,12 @@ local function vis_get_doc_pos(win)
 end
 
 -- convert a lsp_range to a vis_range
--- ATTENTION: this function modifies the primary selection so it is not
--- safe to call it for example during WIN_HIGHLIGHT events
-local function lsp_range_to_vis_range(win, lsp_range)
+local function lsp_range_to_vis_range(file, lsp_range)
   local start = lsp_pos_to_vis_sel(lsp_range.start)
-  local start_pos = vis_sel_to_pos(win, start)
+  local start_pos = vis_sel_to_pos(file, start)
 
   local finish = lsp_pos_to_vis_sel(lsp_range['end'])
-  local finish_pos = vis_sel_to_pos(win, finish)
+  local finish_pos = vis_sel_to_pos(file, finish)
 
   return {start = start_pos, finish = finish_pos}
 end
@@ -420,7 +419,7 @@ end
 local function vis_apply_textEdit(win, file, textEdit)
   assert(win.file == file)
 
-  local range = lsp_range_to_vis_range(win, textEdit.range)
+  local range = lsp_range_to_vis_range(file, textEdit.range)
 
   file:delete(range)
   file:insert(range.start, textEdit.newText)
@@ -437,7 +436,7 @@ local function vis_apply_textEdits(win, file, textEdits)
 
   local edits = {}
   for _, textEdit in ipairs(textEdits) do
-    local range = lsp_range_to_vis_range(win, textEdit.range)
+    local range = lsp_range_to_vis_range(file, textEdit.range)
     table.insert(edits, {
       mark = file:mark_set(range.start),
       len = range.finish - range.start,
@@ -1056,9 +1055,8 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
   if file then
     for _, diagnostic in ipairs(diagnostics) do
       -- We convert the lsp_range to a vis_range here to do it only once.
-      -- And because we can't do it during a WIN_HIGHLIGHT events because
-      -- lsp_range_to_vis_range modifies the primary selection
-      diagnostic.vis_range = lsp_range_to_vis_range(vis.win, diagnostic.range)
+      -- It's an expensive operation that involves counting all newlines.
+      diagnostic.vis_range = lsp_range_to_vis_range(file.file, diagnostic.range)
 
       -- In some instances the range defined by the diagnostic starts
       -- and ends at the same position. Highlight the exact position.
