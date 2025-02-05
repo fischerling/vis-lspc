@@ -177,13 +177,17 @@ local function vis_get_doc_pos(win)
   }
 end
 
--- convert a lsp_range to a vis_range
+--- Convert a lsp_range to a vis_range
+-- @param file the file in which the range lies
+-- @param lsp_range the LSP range that should be converted
+-- @return the according vis range
 local function lsp_range_to_vis_range(file, lsp_range)
   local start = lsp_pos_to_vis_sel(lsp_range.start)
-  local start_pos = util.vis_sel_to_pos(file, start)
-
   local finish = lsp_pos_to_vis_sel(lsp_range['end'])
-  local finish_pos = util.vis_sel_to_pos(file, finish)
+
+  local positions = util.vis_sorted_selections_to_pos(file, {start, finish})
+  local start_pos = positions[1]
+  local finish_pos = positions[2]
 
   return {start = start_pos, finish = finish_pos}
 end

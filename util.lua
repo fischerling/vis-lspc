@@ -211,24 +211,51 @@ local function get_selection(win)
   return {line = win.selection.line, col = win.selection.col}
 end
 
---- Get the 0-based byte offset from a selection.
--- @param sel the vis_selection to convert to a position
--- @return the 0-based position of the selection
-function util.vis_sel_to_pos(file, sel)
+--- Calculate the 0-based byte offsets from multiple sorted selections
+-- @param file the file to calculate the positions in
+-- @param sorted_selections a table of sorted vis_selections
+-- @return a table of positions
+function util.vis_sorted_selections_to_pos(file, sorted_selections)
+  local positions = {}
   if file.pos_by_linecol then
-    return file:pos_by_linecol(sel.line, sel.col)
+    for _, sel in ipairs(sorted_selections) do
+      table.insert(positions, file:pos_by_linecol(sel.line, sel.col))
+    end
+    return positions
   end
 
   local line_count = 0
   local pos = 0
+  local sel_i = 1
+  local sel = sorted_selections[sel_i]
   for line in file:lines_iterator() do
     line_count = line_count + 1
-    if line_count == sel.line then
-      return pos + (sel.col - 1)
+    while line_count == sel.line do
+      table.insert(positions, pos + (sel.col - 1))
+      sel_i = sel_i + 1
+      -- no more selections to convert
+      if sel_i > #sorted_selections then
+        break
+      end
+      sel = sorted_selections[sel_i]
     end
+
     pos = pos + #line + 1
   end
-  return 0
+  return positions
+end
+
+local function vis_pos_before(p1, p2)
+  return p1.line < p2.line or (p1.line == p2.line and p1.col < p2.col)
+end
+
+--- Calculate the 0-based byte offsets from multiple selections
+-- @param file the file to calculate the positions in
+-- @param selections a table of selections
+-- @return a table of positions
+function util.vis_selections_to_pos(file, selections)
+  table.sort(selections, vis_pos_before)
+  return util.vis_sorted_selections_to_pos(file, selections)
 end
 
 --- Get the line and column from a 0-based byte offset
