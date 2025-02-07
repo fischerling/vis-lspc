@@ -674,6 +674,14 @@ function LanguageServer:send_did_change(file)
   self:send_notification('textDocument/didChange', params)
 end
 
+function LanguageServer:request_diagnostics(win)
+  -- check if the language server has a provider for this method
+  if self.capabilities['diagnosticProvider'] then
+    local params = {textDocument = {uri = path_to_uri(win.file.path)}}
+    self:call_method('textDocument/diagnostic', params, win, params.textDocument)
+  end
+end
+
 --- Send a rpc method call to the language server.
 -- @param method name of remote procedure to call
 -- @param params the parameter passed to the remote procedure
@@ -710,6 +718,7 @@ end
 function LanguageServer:call_text_document_method(method, params, win, ctx)
   self:send_did_change(win.file)
   self:call_method('textDocument/' .. method, params, win, ctx)
+  self:request_diagnostics(win)
 end
 
 local function lspc_handle_goto_method_response(req, result)
@@ -921,6 +930,14 @@ local function lspc_handle_formatting_method_response(win, result)
   end
 end
 
+local lspc_handle_publish_diagnostics
+
+local function lspc_handle_diagnostic_method_response(ls, result, ctx)
+  if result then
+    lspc_handle_publish_diagnostics(ls, ctx.uri, result.items)
+  end
+end
+
 local function lspc_handle_initialize_response(ls, result)
   ls.initialized = true
   ls.capabilities = result.capabilities
@@ -987,6 +1004,9 @@ function LanguageServer:handle_method_response(method_response, req)
   elseif method == 'textDocument/formatting' then
     lspc_handle_formatting_method_response(win, result)
 
+  elseif method == 'textDocument/diagnostic' then
+    lspc_handle_diagnostic_method_response(self, result, req.ctx)
+
   elseif method == 'shutdown' then
     self:send_notification('exit')
     self.fd:close()
@@ -1038,7 +1058,7 @@ function LanguageServer:handle_method_call(method_call)
 end
 
 -- save the diagnostics received for a file uri
-local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
+lspc_handle_publish_diagnostics = function(ls, uri, diagnostics)
   local file_path = uri_to_path(uri)
   local file = lspc.open_files[file_path]
   if file then
@@ -1622,6 +1642,27 @@ vis:command_register('lspc-format', function(argv, _, win)
   ls:call_text_document_method('formatting', params, win)
 end)
 
+vis:command_register('lspc-diagnostic', function(argv, _, win)
+  local ls, err = lspc_get_usable_ls(win, argv[1])
+  if err then
+    lspc:err(err)
+    return
+  end
+  assert(ls)
+
+  -- check if the language server has a provider for this method
+  if not ls.capabilities['diagnosticProvider'] then
+    lspc:err('language server ' .. ls.name .. ' does not provide document diagnostics')
+    return
+  end
+
+  if not lspc.open_files[win.file.path] then
+    lspc_open(ls, win, win.file)
+  end
+
+  ls:request_diagnostics(win)
+end)
+
 vis:command_register('lspc-completion', function(argv, _, win)
   local ls, err = lspc_get_usable_ls(win, argv[1])
   if err then
@@ -1765,6 +1806,7 @@ vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
       local did_save_params = {textDocument = {uri = path_to_uri(file.path)}}
       ls:send_notification('textDocument/didSave', did_save_params)
     end
+    ls:request_diagnostics(vis.win)
   end
 end)
 
