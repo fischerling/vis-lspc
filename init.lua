@@ -140,33 +140,6 @@ local function get_selection(win)
   return {line = win.selection.line, col = win.selection.col}
 end
 
--- get the 0-based byte offset from a selection
-local function vis_sel_to_pos(file, sel)
-  local line_count = 0
-  local pos = 0
-  for line in file:lines_iterator() do
-    line_count = line_count + 1
-    if line_count == sel.line then
-      return pos + (sel.col - 1)
-    end
-    pos = pos + #line + 1
-  end
-  return 0
-end
-
--- get the line and column from a 0-based byte offset
--- ATTENTION: this function modifies the primary selection so it is not
--- safe to call it for example during WIN_HIGHLIGHT events
-local function vis_pos_to_sel(win, pos)
-  local old_selection = get_selection(win)
-  -- move primary selection
-  win.selection.pos = pos
-  local sel = get_selection(win)
-  -- restore old primary selection
-  win.selection:to(old_selection.line, old_selection.col)
-  return sel
-end
-
 -- convert lsp_position to vis_selection
 local function lsp_pos_to_vis_sel(pos)
   return {line = pos.line + 1, col = pos.character + 1}
@@ -207,10 +180,10 @@ end
 -- convert a lsp_range to a vis_range
 local function lsp_range_to_vis_range(file, lsp_range)
   local start = lsp_pos_to_vis_sel(lsp_range.start)
-  local start_pos = vis_sel_to_pos(file, start)
+  local start_pos = util.vis_sel_to_pos(file, start)
 
   local finish = lsp_pos_to_vis_sel(lsp_range['end'])
-  local finish_pos = vis_sel_to_pos(file, finish)
+  local finish_pos = util.vis_sel_to_pos(file, finish)
 
   return {start = start_pos, finish = finish_pos}
 end
@@ -864,7 +837,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
     return
   end
 
-  local sel = vis_pos_to_sel(win, old_pos)
+  local sel = util.vis_pos_to_sel(win, old_pos)
 
   local hover_header =
       '--- hover: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' .. sel.col .. ' ---\n'
@@ -900,7 +873,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
 
   local signatures = result.signatures
 
-  local sel = vis_pos_to_sel(win, call_pos)
+  local sel = util.vis_pos_to_sel(win, call_pos)
   local help_header = '--- signature help: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' ..
                           sel.col .. ' ---\n'
 

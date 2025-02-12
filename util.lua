@@ -206,4 +206,50 @@ function util.find_upwards(globs, start)
   return out:sub(1, #out - 1)
 end
 
+-- get the vis_selection from current primary selection
+local function get_selection(win)
+  return {line = win.selection.line, col = win.selection.col}
+end
+
+--- Get the 0-based byte offset from a selection.
+-- @param sel the vis_selection to convert to a position
+-- @return the 0-based position of the selection
+function util.vis_sel_to_pos(file, sel)
+  if file.pos_by_linecol then
+    return file:pos_by_linecol(sel.line, sel.col)
+  end
+
+  local line_count = 0
+  local pos = 0
+  for line in file:lines_iterator() do
+    line_count = line_count + 1
+    if line_count == sel.line then
+      return pos + (sel.col - 1)
+    end
+    pos = pos + #line + 1
+  end
+  return 0
+end
+
+--- Get the line and column from a 0-based byte offset
+-- ATTENTION: the fallback version of this function modifies the primary
+-- selection so it is not safe to call it for example during WIN_HIGHLIGHT events
+-- @param pos the 0-based byte offset into the file
+-- @return the 1-based line number
+-- @return the 1-based column
+function util.vis_pos_to_sel(win, pos)
+  if win.file.linecol_by_pos then
+    local lineno, col = win.file:linecol_by_pos(pos)
+    return {line = lineno, col = col}
+  end
+
+  local old_selection = get_selection(win)
+  -- move primary selection
+  win.selection.pos = pos
+  local sel = get_selection(win)
+  -- restore old primary selection
+  win.selection:to(old_selection.line, old_selection.col)
+  return sel
+end
+
 return util
