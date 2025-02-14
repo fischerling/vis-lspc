@@ -192,12 +192,19 @@ local function lsp_range_to_vis_range(file, lsp_range)
   return {start = start_pos, finish = finish_pos}
 end
 
--- return true if p1 is before p2
+--- Check if a lsp_position lies before another.
+-- @param p1 first lsp_position to compare
+-- @param p2 second lsp_position to compare
+-- @return true if p1 lies before p2
 local function lsp_pos_before(p1, p2)
   return p1.line < p2.line or (p1.line == p2.line and p1.character < p2.character)
 end
 
--- return true if r1 starts before r2
+--- Check if a lsp_range starts before another.
+-- The ranges may overlap since only their start positions are compared.
+-- @param r1 first lsp_range to compare
+-- @param r2 second lsp_range to compare
+-- @return true if r1 is starts before r2
 local function lsp_range_starts_before(r1, r2)
   return lsp_pos_before(r1.start, r2.start)
 end
