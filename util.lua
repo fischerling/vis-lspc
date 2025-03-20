@@ -3,7 +3,7 @@
 -- @author Florian Fischer
 -- @author git-bruh <prathamIN@proton.me>
 -- @license GPL-3
--- @copyright 2024 Florian Fischer
+-- @copyright 2024-2025 Florian Fischer
 -- @copyright 2024 git-bruh <prathamIN@proton.me>
 local util = {}
 
@@ -345,30 +345,25 @@ end
 --- Recursively merge two tables.
 -- This method modifies the weak table, if this is not intended make sure you
 -- use a deep copy of the weak table.
--- The members of the strong table override members of the weak one.
+-- Named members of the strong table override members of the weak one.
+-- Numbered members get inserted into the weak table.
 -- @param weak table which's members are potentially overridden
 -- @param strong table which's members override ones from the weak table
 -- @return the merged table
 function util.table.merge(weak, strong)
-  -- merge named members
   for k, v in pairs(strong) do
-    -- potentially override the weak member
     if type(v) ~= 'table' then
-      weak[k] = v
+      if tonumber(k) then -- append numeric members
+        table.insert(weak, v)
+      else -- potentially override the weak member
+        weak[k] = v
+      end
+
     else
       weak[k] = util.table.merge(weak[k] or {}, v)
     end
   end
 
-  -- merge numbered members
-  for i, v in ipairs(strong) do
-    -- potentially override the weak member
-    if type(v) ~= 'table' then
-      weak[i] = v
-    else
-      weak[i] = util.table.merge(weak[i] or {}, v)
-    end
-  end
   return weak
 end
 

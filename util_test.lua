@@ -57,11 +57,16 @@ function test_table_merge() -- luacheck: ignore 111
   util.table.merge(t, t2)
 
   lunatest.assert_table(t)
-  lunatest.assert_len(2, t)
+  lunatest.assert_len(3, t)
+
+  lunatest.assert_equal(1, t[1])
+  lunatest.assert_equal(2, t[2])
+  lunatest.assert_equal(3, t[3])
+
   lunatest.assert_table(t.foo)
   lunatest.assert_len(2, t.foo)
 
-  lunatest.assert_equal(t[1], t2[1])
+  lunatest.assert_equal(t[3], t2[1])
   lunatest.assert_equal(t[2], 2)
 
   lunatest.assert_equal(t.foo.bar.bar, 'bar')
