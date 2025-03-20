@@ -156,7 +156,7 @@ function settings.effective_settings(ls, section, scope)
                ls.name)
   local effective_settings = {}
   if ls.conf.settings then
-    lspc:log('global settings ' .. lspc.json.encode(effective_settings))
+    lspc:log('global settings ' .. lspc.json.encode(ls.conf.settings))
     effective_settings = util.table.deep_copy(ls.conf.settings)
     if section then
       effective_settings = settings.get_section(effective_settings, section)
