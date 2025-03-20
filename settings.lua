@@ -137,9 +137,13 @@ function settings.project_local_settings(section, scope)
 
     local settings_path = settings_dir .. '/' .. settings_name
     lspc:log('settings: found project specific settings at "' .. settings_path)
-    local ls_settings = read_settings(settings_path)[section] or {}
+    local ls_settings = read_settings(settings_path) or {}
+    if section then
+      ls_settings = ls_settings[section] or {}
+    end
     -- The settings found later have less priority than the settings found earlier
     merged_settings = util.table.merge(ls_settings, merged_settings)
+
   end
 end
 
