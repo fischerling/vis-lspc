@@ -31,7 +31,7 @@ function util.capture_cmd(cmd)
   return s
 end
 
-local vis_supports_pipe_buf = pcall(vis.pipe, vis, 'foo', 'true')
+local vis_supports_pipe_buf = pcall(vis.pipe, vis, 'foo', 'true', false)
 
 --- Wrapper for the two vis:pipe variants.
 -- If vis does not support vis:pipe(input, cmd), prefix the command
