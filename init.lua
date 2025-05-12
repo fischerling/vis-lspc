@@ -725,7 +725,7 @@ function LanguageServer:call_text_document_method(method, params, win, ctx)
 end
 
 local function lspc_handle_goto_method_response(req, result)
-  if not result or next(result) == nil then
+  if not result or type(result) ~= 'table' or next(result) == nil then
     lspc:warn(req.method .. ' found no results')
     return
   end
@@ -772,7 +772,7 @@ local function lspc_handle_goto_method_response(req, result)
 end
 
 local function lspc_handle_completion_method_response(win, result, old_pos)
-  if not result or not result.items then
+  if not result or type(result) ~= 'table' or not result.items then
     lspc:warn('no completion available')
     return
   end
@@ -860,7 +860,7 @@ local function lspc_handle_completion_method_response(win, result, old_pos)
 end
 
 local function lspc_handle_hover_method_response(win, result, old_pos)
-  if not result or not result.contents then
+  if not result or type(result) ~= 'table' or not result.contents then
     lspc:warn('no hover available')
     return
   end
@@ -894,7 +894,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
 end
 
 local function lspc_handle_signature_help_method_response(win, result, call_pos)
-  if not result or not result.signatures or #result.signatures == 0 then
+  if not result or type(result) ~= 'table' or not result.signatures or #result.signatures == 0 then
     lspc:warn('no signature help available')
     return
   end
