@@ -206,4 +206,77 @@ function util.find_upwards(globs, start)
   return out:sub(1, #out - 1)
 end
 
+-- get the vis_selection from current primary selection
+local function get_selection(win)
+  return {line = win.selection.line, col = win.selection.col}
+end
+
+--- Calculate the 0-based byte offsets from multiple sorted selections
+-- @param file the file to calculate the positions in
+-- @param sorted_selections a table of sorted vis_selections
+-- @return a table of positions
+function util.vis_sorted_selections_to_pos(file, sorted_selections)
+  local positions = {}
+  if file.pos_by_linecol then
+    for _, sel in ipairs(sorted_selections) do
+      table.insert(positions, file:pos_by_linecol(sel.line, sel.col))
+    end
+    return positions
+  end
+
+  local line_count = 0
+  local pos = 0
+  local sel_i = 1
+  local sel = sorted_selections[sel_i]
+  for line in file:lines_iterator() do
+    line_count = line_count + 1
+    while line_count == sel.line do
+      table.insert(positions, pos + (sel.col - 1))
+      sel_i = sel_i + 1
+      -- no more selections to convert
+      if sel_i > #sorted_selections then
+        break
+      end
+      sel = sorted_selections[sel_i]
+    end
+
+    pos = pos + #line + 1
+  end
+  return positions
+end
+
+local function vis_pos_before(p1, p2)
+  return p1.line < p2.line or (p1.line == p2.line and p1.col < p2.col)
+end
+
+--- Calculate the 0-based byte offsets from multiple selections
+-- @param file the file to calculate the positions in
+-- @param selections a table of selections
+-- @return a table of positions
+function util.vis_selections_to_pos(file, selections)
+  table.sort(selections, vis_pos_before)
+  return util.vis_sorted_selections_to_pos(file, selections)
+end
+
+--- Get the line and column from a 0-based byte offset
+-- ATTENTION: the fallback version of this function modifies the primary
+-- selection so it is not safe to call it for example during WIN_HIGHLIGHT events
+-- @param pos the 0-based byte offset into the file
+-- @return the 1-based line number
+-- @return the 1-based column
+function util.vis_pos_to_sel(win, pos)
+  if win.file.linecol_by_pos then
+    local lineno, col = win.file:linecol_by_pos(pos)
+    return {line = lineno, col = col}
+  end
+
+  local old_selection = get_selection(win)
+  -- move primary selection
+  win.selection.pos = pos
+  local sel = get_selection(win)
+  -- restore old primary selection
+  win.selection:to(old_selection.line, old_selection.col)
+  return sel
+end
+
 return util

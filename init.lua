@@ -140,32 +140,6 @@ local function get_selection(win)
   return {line = win.selection.line, col = win.selection.col}
 end
 
--- get the 0-based byte offset from a selection
--- ATTENTION: this function modifies the primary selection so it is not
--- safe to call it for example during WIN_HIGHLIGHT events
-local function vis_sel_to_pos(win, selection)
-  local old_selection = get_selection(win)
-  -- move primary selection
-  win.selection:to(selection.line, selection.col)
-  local pos = win.selection.pos
-  -- restore old primary selection
-  win.selection:to(old_selection.line, old_selection.col)
-  return pos
-end
-
--- get the line and column from a 0-based byte offset
--- ATTENTION: this function modifies the primary selection so it is not
--- safe to call it for example during WIN_HIGHLIGHT events
-local function vis_pos_to_sel(win, pos)
-  local old_selection = get_selection(win)
-  -- move primary selection
-  win.selection.pos = pos
-  local sel = get_selection(win)
-  -- restore old primary selection
-  win.selection:to(old_selection.line, old_selection.col)
-  return sel
-end
-
 -- convert lsp_position to vis_selection
 local function lsp_pos_to_vis_sel(pos)
   return {line = pos.line + 1, col = pos.character + 1}
@@ -203,25 +177,34 @@ local function vis_get_doc_pos(win)
   }
 end
 
--- convert a lsp_range to a vis_range
--- ATTENTION: this function modifies the primary selection so it is not
--- safe to call it for example during WIN_HIGHLIGHT events
-local function lsp_range_to_vis_range(win, lsp_range)
+--- Convert a lsp_range to a vis_range
+-- @param file the file in which the range lies
+-- @param lsp_range the LSP range that should be converted
+-- @return the according vis range
+local function lsp_range_to_vis_range(file, lsp_range)
   local start = lsp_pos_to_vis_sel(lsp_range.start)
-  local start_pos = vis_sel_to_pos(win, start)
-
   local finish = lsp_pos_to_vis_sel(lsp_range['end'])
-  local finish_pos = vis_sel_to_pos(win, finish)
+
+  local positions = util.vis_sorted_selections_to_pos(file, {start, finish})
+  local start_pos = positions[1]
+  local finish_pos = positions[2]
 
   return {start = start_pos, finish = finish_pos}
 end
 
--- return true if p1 is before p2
+--- Check if a lsp_position lies before another.
+-- @param p1 first lsp_position to compare
+-- @param p2 second lsp_position to compare
+-- @return true if p1 lies before p2
 local function lsp_pos_before(p1, p2)
   return p1.line < p2.line or (p1.line == p2.line and p1.character < p2.character)
 end
 
--- return true if r1 starts before r2
+--- Check if a lsp_range starts before another.
+-- The ranges may overlap since only their start positions are compared.
+-- @param r1 first lsp_range to compare
+-- @param r2 second lsp_range to compare
+-- @return true if r1 is starts before r2
 local function lsp_range_starts_before(r1, r2)
   return lsp_pos_before(r1.start, r2.start)
 end
@@ -420,7 +403,7 @@ end
 local function vis_apply_textEdit(win, file, textEdit)
   assert(win.file == file)
 
-  local range = lsp_range_to_vis_range(win, textEdit.range)
+  local range = lsp_range_to_vis_range(file, textEdit.range)
 
   file:delete(range)
   file:insert(range.start, textEdit.newText)
@@ -437,7 +420,7 @@ local function vis_apply_textEdits(win, file, textEdits)
 
   local edits = {}
   for _, textEdit in ipairs(textEdits) do
-    local range = lsp_range_to_vis_range(win, textEdit.range)
+    local range = lsp_range_to_vis_range(file, textEdit.range)
     table.insert(edits, {
       mark = file:mark_set(range.start),
       len = range.finish - range.start,
@@ -865,7 +848,7 @@ local function lspc_handle_hover_method_response(win, result, old_pos)
     return
   end
 
-  local sel = vis_pos_to_sel(win, old_pos)
+  local sel = util.vis_pos_to_sel(win, old_pos)
 
   local hover_header =
       '--- hover: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' .. sel.col .. ' ---\n'
@@ -901,7 +884,7 @@ local function lspc_handle_signature_help_method_response(win, result, call_pos)
 
   local signatures = result.signatures
 
-  local sel = vis_pos_to_sel(win, call_pos)
+  local sel = util.vis_pos_to_sel(win, call_pos)
   local help_header = '--- signature help: ' .. (win.file.path or '') .. ': ' .. sel.line .. ', ' ..
                           sel.col .. ' ---\n'
 
@@ -1056,9 +1039,8 @@ local function lspc_handle_publish_diagnostics(ls, uri, diagnostics)
   if file then
     for _, diagnostic in ipairs(diagnostics) do
       -- We convert the lsp_range to a vis_range here to do it only once.
-      -- And because we can't do it during a WIN_HIGHLIGHT events because
-      -- lsp_range_to_vis_range modifies the primary selection
-      diagnostic.vis_range = lsp_range_to_vis_range(vis.win, diagnostic.range)
+      -- It's an expensive operation that involves counting all newlines.
+      diagnostic.vis_range = lsp_range_to_vis_range(file.file, diagnostic.range)
 
       -- In some instances the range defined by the diagnostic starts
       -- and ends at the same position. Highlight the exact position.
