@@ -1212,21 +1212,6 @@ local function lspc_open(ls, win, file)
 
   ls:send_notification('textDocument/didOpen', params)
 
-  vis.events.subscribe(vis.events.FILE_CLOSE, function(closed_file)
-    lspc_close(ls, closed_file)
-  end)
-
-  -- the server is interested in didSave notifications
-  if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) == 'table' and
-      ls.capabilities.textDocumentSync.save then
-    vis.events.subscribe(vis.events.FILE_SAVE_POST, function(saved_file, path)
-      if ls:is_file_opened(saved_file) then
-        local did_save_params = {textDocument = {uri = path_to_uri(path)}}
-        ls:send_notification('textDocument/didSave', did_save_params)
-      end
-    end)
-  end
-
   vis.events.emit(lspc.events.LS_DID_OPEN, ls, file)
 end
 
@@ -1766,8 +1751,26 @@ vis.events.subscribe(vis.events.FILE_SAVE_POST, function(file, path)
   if not file_handle then
     return
   end
+
   for ls in pairs(file_handle.language_servers) do
     ls:send_did_change(file)
+    -- the server is interested in didSave notifications
+    if ls.capabilities.textDocumentSync and type(ls.capabilities.textDocumentSync) == 'table' and
+        ls.capabilities.textDocumentSync.save then
+      local did_save_params = {textDocument = {uri = path_to_uri(file.path)}}
+      ls:send_notification('textDocument/didSave', did_save_params)
+    end
+  end
+end)
+
+vis.events.subscribe(vis.events.FILE_CLOSE, function(closed_file)
+  local file_handle = lspc.open_files[closed_file.path]
+  if not file_handle then
+    return
+  end
+
+  for ls in pairs(file_handle.language_servers) do
+    lspc_close(ls, closed_file)
   end
 end)
 
