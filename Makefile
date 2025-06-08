@@ -1,4 +1,4 @@
-.PHONY: check format check-luacheck check-format
+.PHONY: check format check-luacheck check-format test
 
 LUA_FILES := $(shell find -name "*.lua" -not -path "./json.lua" -and -not -path "./tests/*")
 
