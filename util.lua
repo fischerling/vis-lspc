@@ -279,4 +279,29 @@ function util.vis_pos_to_sel(win, pos)
   return sel
 end
 
+--- Count the visual characters in a line
+-- This is useful to detect wrapped lines including tabs which may add a
+-- unspecified amount of white space to a line depending on their position and
+-- the used tabwidth.
+-- @param win the window containing the line
+-- @param line the line to count
+-- @param nchars the number of characters in the line
+-- @return the number of visual characters
+util.visual_chars_in_line = function(win, line, nchars)
+  -- fast string iteration inspired by:
+  -- https://stackoverflow.com/a/49222705
+  local l = {string.byte(line, 1, nchars)}
+  local line_len = 0
+  for i = 1, nchars do
+    local c = l[i] -- Note: produces char codes instead of chars.
+    if c == 9 then -- '\t'
+      local chars_to_tab_stop = win.options.tabwidth - (line_len % win.options.tabwidth)
+      line_len = line_len + chars_to_tab_stop
+    else
+      line_len = line_len + 1
+    end
+  end
+  return line_len
+end
+
 return util

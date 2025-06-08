@@ -566,9 +566,14 @@ local function file_lineno_to_viewport_lineno(win, file_lineno)
     local view_lineno = 0
     for n = win.viewport.lines.start, file_lineno do
       view_lineno = view_lineno + 1
-      -- Wrapped line this shifts our displayed line down
-      if #win.file.lines[n] > win.viewport.width then
-        view_lineno = view_lineno + math.floor(#win.file.lines[n] / win.viewport.width)
+      -- Wrapped lines shift our displayed line down
+      local line_len = #win.file.lines[n]
+      if not win.options.expandtab then
+        line_len = util.visual_chars_in_line(win, win.file.lines[n], line_len)
+      end
+
+      if line_len >= win.viewport.width then
+        view_lineno = view_lineno + math.floor(line_len / win.viewport.width)
       end
     end
     return view_lineno
