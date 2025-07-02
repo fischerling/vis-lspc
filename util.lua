@@ -242,6 +242,14 @@ function util.vis_sorted_selections_to_pos(file, sorted_selections)
 
     pos = pos + #line + 1
   end
+
+  -- Some language servers (pylsp) sends a range including the first character after the last line.
+  -- e.g. [{"line":1, "col":1}, {"line":#lines+1, "col":1}]
+  -- But this selection can not be handled by iterating all lines.
+  -- Add a special case for the selection of the first char after the last line.
+  if sel.line == line_count + 1 and sel.col == 1 then
+    table.insert(positions, pos)
+  end
   return positions
 end
 
