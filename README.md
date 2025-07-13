@@ -120,6 +120,7 @@ Available options are:
 * `autostart = true` - try to start a language server in WIN_OPEN
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
 * `confirm_cmd = 'vis-menu'` - program to prompt for user confirmation
+* `autoconfirm_edits = false` - apply workspaceEdits without user confirmation
 * `ls_map` - a table mapping `vis` syntax names to language server configurations
 * `highlight_diagnostics = 'line'` - highlight the `range` or `line`number of available diagnostics
 * `diagnostic_style_id = nil` - vis style id used to highlight diagnostics, win.STYLE_LEXER_MAX is used by default

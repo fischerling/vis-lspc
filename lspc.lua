@@ -23,6 +23,8 @@ local lspc = {
   menu_cmd = 'vis-menu -l 10',
   -- program used to ask the user for confirmation
   confirm_cmd = 'vis-menu',
+  -- apply workspaceEdits without confirmation
+  autoconfirm_edits = false,
 
   -- should diagnostics be highlighted if available
   highlight_diagnostics = 'line',
