@@ -487,27 +487,29 @@ local function vis_apply_workspaceEdit(_, _, workspaceEdit)
     end
   end
 
-  -- generate change summary
-  local summary = '--- workspace edit summary ---\n'
-  for uri, edits in pairs(file_edits) do
-    local path = uri_to_path(uri)
-    summary = summary .. path .. ':\n'
-    for i, edit in ipairs(edits) do
-      summary = summary .. '\t' .. i .. '.: ' .. lspc.json.encode(edit) .. '\n'
+  if not lspc.autoconfirm_edits then
+    -- generate change summary
+    local summary = '--- workspace edit summary ---\n'
+    for uri, edits in pairs(file_edits) do
+      local path = uri_to_path(uri)
+      summary = summary .. path .. ':\n'
+      for i, edit in ipairs(edits) do
+        summary = summary .. '\t' .. i .. '.: ' .. lspc.json.encode(edit) .. '\n'
+      end
     end
-  end
 
-  lspc_show_message(summary)
-  vis:redraw()
+    lspc_show_message(summary)
+    vis:redraw()
 
-  -- get user confirmation
-  local confirmation = lspc_confirm('apply changes:')
+    -- get user confirmation
+    local confirmation = lspc_confirm('apply changes:')
 
-  -- close summary window
-  lspc_close_message_win()
+    -- close summary window
+    lspc_close_message_win()
 
-  if not confirmation then
-    return
+    if not confirmation then
+      return
+    end
   end
 
   -- apply changes to open files
