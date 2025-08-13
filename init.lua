@@ -967,7 +967,7 @@ function LanguageServer:send_default_settings()
   -- Use the rootUri or the open file's path as scope for the initial settings
   local scope = self.rootUri or vis.win.file and vis.win.file.path
   local effective_ls_settings = settings.effective_settings(self, nil, scope)
-  if effective_ls_settings then
+  if next(effective_ls_settings) then
     self:send_notification('workspace/didChangeConfiguration', {
       settings = effective_ls_settings,
     })
@@ -1049,7 +1049,12 @@ local function lspc_handle_workspace_configuration_call(ls, params, response)
   for _, item in ipairs(params.items) do
     local scope = item.scopeUri and uri_to_path(item.scopeUri)
     local effective_settings = settings.effective_settings(ls, item.section, scope)
-    table.insert(results, effective_settings)
+    -- If we can not provide any settings LSP requires that null is present in the result array.
+    if next(effective_settings) then
+      table.insert(results, effective_settings)
+    else
+      table.insert(results, nil)
+    end
   end
   response.result = results
 end
