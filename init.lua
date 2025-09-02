@@ -292,7 +292,7 @@ local function lspc_select_location(locations)
       local location = val['location']
 
       local choice = rel_path .. ':' .. ('%.0f'):format(position.line) .. ':' ..
-                         ('%.0f'):format(position.col) .. ':' .. line_iter(position.line)
+                         ('%.0f'):format(position.col) .. ':' .. (line_iter(position.line) or '')
       table.insert(choices, choice)
       choices[choice] = location
     end
