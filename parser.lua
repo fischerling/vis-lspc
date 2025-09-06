@@ -23,7 +23,7 @@ function Parser:add(data)
   -- we have not seen a complete header in data yet
   if not self.exp_len then
     -- search for the end of a header
-    -- LSP message format: 'header\r\n\r\nbody'
+    -- LSP message format: header\r\n(header\r\n)?\r\nbody'
     local header_end, content_start = self.data:find('\r\n\r\n')
 
     -- header is not complete yet -> save data and wait for more
@@ -35,7 +35,8 @@ function Parser:add(data)
     local header = self.data:sub(1, header_end)
 
     -- extract content length from the header
-    self.exp_len = tonumber(header:match('%d+'))
+    local length = header:match('Content%-Length: %d+')
+    self.exp_len = tonumber(length:match('%d+'))
     if not self.exp_len then
       return 'invalid header in data: ' .. self.data
     end
