@@ -1030,14 +1030,17 @@ end
 local function lspc_handle_workspace_configuration_call(ls, params, response)
   local results = {}
   for _, item in ipairs(params.items) do
-    local t = ls.settings
-    for k in item.section:gmatch('[^.]+') do
-      if not t then
-        break
+    -- de-flatten the section and map it to our settings if one is present.
+    if item.section then
+      local t = ls.settings
+      for k in item.section:gmatch('[^.]+') do
+        if not t then
+          break
+        end
+        t = t[k]
       end
-      t = t[k]
+      table.insert(results, t or lspc.json.null)
     end
-    table.insert(results, t or lspc.json.null)
   end
   response.result = results
 end
