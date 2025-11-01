@@ -1764,11 +1764,6 @@ local function highlight_event()
     return
   end
 
-  local ls = lspc_get_usable_ls(win)
-  if not ls then
-    return
-  end
-
   local open_file = lspc.open_files[win.file.path]
   if open_file and open_file.diagnostics and lspc.highlight_diagnostics then
     lspc_highlight_diagnostics(win, open_file.diagnostics)
