@@ -71,6 +71,8 @@ Alternatively, a plugin manager like [vis-plug](https://github.com/erf/vis-plug)
 	< D> - jump to type definition
 	<C-t> - go back in the jump history
 	< e> - show diagnostics of current line
+	< n> - jump to the next available diagnostic
+	< N> - jump to the previous available diagnostic
 	<K> - hover over current position
 	Normal and Insert mode:
 	<C- > - get completions
