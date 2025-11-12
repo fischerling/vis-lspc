@@ -66,6 +66,14 @@ vis:map(vis.modes.NORMAL, ' e', function()
   vis:command('lspc-show-diagnostics')
 end, 'lspc: show diagnostic of current line')
 
+vis:map(vis.modes.NORMAL, ' n', function()
+  vis:command('lspc-next-diagnostic')
+end, 'lspc: jump to the next available diagnostic')
+
+vis:map(vis.modes.NORMAL, ' N', function()
+  vis:command('lspc-prev-diagnostic')
+end, 'lspc: jump to the previous available diagnostic')
+
 vis:map(vis.modes.NORMAL, 'K', function()
   vis:command('lspc-hover')
 end, 'lspc: hover over current position')
