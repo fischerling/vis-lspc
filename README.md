@@ -117,7 +117,7 @@ Available options are:
 
 * `name = 'vis-lspc'` - the name `vis-lspc` introduces itself to a language server
 * `logging = false` - enable logging only useful for debugging `vis-lspc`
-* `log_file = nil` - nil, filename or function returning a filename
+* `log_file = nil` - nil, filename, or function returning a filename
   * If `log_file` is `nil` `vis-lspc` will create a new file in `$XDG_DATA_HOME/vis-lspc`
 * `autostart = true` - try to start a language server in WIN_OPEN
 * `menu_cmd = 'fzf' or 'vis-menu'` - program to prompt for user choices
@@ -180,7 +180,7 @@ If you want to use some universal criteria to detect project roots, like always 
 
 Additionally, you can configure globs to detect a project's root for each language server using the `roots` member in its `ls_map` table entry.
 
-For example `roots = {'compile_commands.json', '.clangd'}` is used to detect the project root for clangd.
+For example, `roots = {'compile_commands.json', '.clangd'}` is used to detect the project root for clangd.
 
 ### Events
 
