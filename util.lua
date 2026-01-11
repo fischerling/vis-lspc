@@ -3,7 +3,7 @@
 -- @author Florian Fischer
 -- @author git-bruh <prathamIN@proton.me>
 -- @license GPL-3
--- @copyright 2024 Florian Fischer
+-- @copyright 2024-2025 Florian Fischer
 -- @copyright 2024 git-bruh <prathamIN@proton.me>
 local util = {}
 
@@ -314,6 +314,57 @@ util.visual_chars_in_line = function(win, line, nchars)
     end
   end
   return line_len
+end
+
+--- Utility table function
+util.table = {}
+
+--- Recursively copy a table and all its members.
+-- @param tbl the table to copy
+-- @return a deep copy of the table
+function util.table.deep_copy(tbl)
+  local cpy = {}
+  for k, v in pairs(tbl) do
+    if type(v) ~= 'table' then
+      cpy[k] = v
+    else
+      cpy[k] = util.table.deep_copy(v)
+    end
+  end
+
+  for i, v in ipairs(tbl) do
+    if type(v) ~= 'table' then
+      cpy[i] = v
+    else
+      cpy[i] = util.table.deep_copy(v)
+    end
+  end
+  return cpy
+end
+
+--- Recursively merge two tables.
+-- This method modifies the weak table, if this is not intended make sure you
+-- use a deep copy of the weak table.
+-- Named members of the strong table override members of the weak one.
+-- Numbered members get inserted into the weak table.
+-- @param weak table which's members are potentially overridden
+-- @param strong table which's members override ones from the weak table
+-- @return the merged table
+function util.table.merge(weak, strong)
+  for k, v in pairs(strong) do
+    if type(v) ~= 'table' then
+      if tonumber(k) then -- append numeric members
+        table.insert(weak, v)
+      else -- potentially override the weak member
+        weak[k] = v
+      end
+
+    else
+      weak[k] = util.table.merge(weak[k] or {}, v)
+    end
+  end
+
+  return weak
 end
 
 return util

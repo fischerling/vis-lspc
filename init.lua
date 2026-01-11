@@ -34,6 +34,9 @@ local parser = dofile(source_path .. 'parser.lua')
 -- initialise the util module
 local util = dofile(source_path .. 'util.lua').init(lspc)
 
+-- initialise the settings module
+local settings = dofile(source_path .. 'settings.lua').init(lspc)
+
 -- load a suitable json module
 lspc.json = dofile(source_path .. 'json.lua')
 
@@ -85,7 +88,9 @@ end
 -- map of known language servers per syntax
 lspc.ls_map = dofile(source_path .. 'supported-servers.lua')
 
--- return the name of the language server for this syntax
+--- Return the name of the language server for this syntax
+-- @param syntax the syntax the language server should support
+-- @return the name of the languauge server configured for syntax
 local function get_ls_name_for_syntax(syntax)
   local ls_def = lspc.ls_map[syntax]
   if not ls_def then
@@ -951,13 +956,22 @@ local function lspc_handle_initialize_response(ls, result)
   -- According to nvim-lspconfig sendig the lsp server settings shortly after
   -- initialization is an undocumented convention.
   -- See https://github.com/neovim/nvim-lspconfig/blob/ed88435764d8b00442e66d39ec3d9c360e560783/CONTRIBUTING.md
-  if ls.settings then
-    ls:send_notification('workspace/didChangeConfiguration', {
-      settings = ls.settings,
-    })
-  end
+  lspc:log('Loading settings for ' .. ls.name)
+  ls:send_default_settings()
 
   vis.events.emit(lspc.events.LS_INITIALIZED, ls)
+end
+
+--- Send didChangeConfiguration notification with the default settings
+function LanguageServer:send_default_settings()
+  -- Use the rootUri or the open file's path as scope for the initial settings
+  local scope = self.rootUri or vis.win.file and vis.win.file.path
+  local effective_ls_settings = settings.effective_settings(self, nil, scope)
+  if next(effective_ls_settings) then
+    self:send_notification('workspace/didChangeConfiguration', {
+      settings = effective_ls_settings,
+    })
+  end
 end
 
 --- Dispatch method response from the server
@@ -1027,19 +1041,19 @@ function LanguageServer:handle_method_response(method_response, req)
   self.inflight[method_response.id] = nil
 end
 
+--- Handle a workspace/configuration request from a server
+-- @param params the parameters send with the request
+-- @param response the response we are about to send
 local function lspc_handle_workspace_configuration_call(ls, params, response)
   local results = {}
   for _, item in ipairs(params.items) do
-    -- de-flatten the section and map it to our settings if one is present.
-    if item.section then
-      local t = ls.settings
-      for k in item.section:gmatch('[^.]+') do
-        if not t then
-          break
-        end
-        t = t[k]
-      end
-      table.insert(results, t or lspc.json.null)
+    local scope = item.scopeUri and uri_to_path(item.scopeUri)
+    local effective_settings = settings.effective_settings(ls, item.section, scope)
+    -- If we can not provide any settings LSP requires that null is present in the result array.
+    if next(effective_settings) then
+      table.insert(results, effective_settings)
+    else
+      table.insert(results, nil)
     end
   end
   response.result = results
@@ -1161,8 +1175,11 @@ function LanguageServer:recv_data(data)
   end
 end
 
--- check if a language server is running and initialized
-local function lspc_get_usable_ls(win, explicit_syntax)
+--- Return a running language server
+-- @param win the window for which the language server might be running
+-- @param explicit_syntax the syntax if different from win.syntax
+-- @return a running language server or nil and an error message
+function lspc.get_running_ls(win, explicit_syntax)
   local ls
   local syntax = explicit_syntax or (win and win.syntax)
   -- try to use the first language server managing the current file
@@ -1187,6 +1204,21 @@ local function lspc_get_usable_ls(win, explicit_syntax)
     end
   end
 
+  return ls
+end
+
+--- Return a running and initialized language server
+-- @param win the window for which the language server might be running
+-- @param explicit_syntax the syntax if different from win.syntax
+-- @return a running and initialized language server or nil and an error message
+local function lspc_get_usable_ls(win, explicit_syntax)
+  local ls, err = lspc.get_running_ls(win, explicit_syntax)
+
+  if err then
+    return nil, err
+  end
+
+  assert(ls)
   if not ls.initialized then
     return nil, 'Language server ' .. ls.name .. ' not initialized yet. Please try again'
   end
@@ -1280,7 +1312,10 @@ local function find_root_uri(ls, file_path)
 end
 
 local function ls_start(ls, init_options)
-  ls.fd = vis:communicate(ls.name, 'exec ' .. ls.cmd)
+  ls.fd = vis:communicate(ls.name, 'exec ' .. ls.conf.cmd)
+
+  -- detect the workspace root
+  ls.rootUri = vis.win.file and find_root_uri(ls, vis.win.file.path)
 
   -- register the response handler
   vis.events.subscribe(vis.events.PROCESS_RESPONSE, function(name, event, code, msg)
@@ -1310,7 +1345,7 @@ local function ls_start(ls, init_options)
   local params = {
     processId = vis_pid,
     clientInfo = {name = lspc.name, version = lspc.version},
-    rootUri = (vis.win.file and find_root_uri(ls, vis.win.file.path)) or lspc.json.null,
+    rootUri = ls.rootUri or lspc.json.null,
     capabilities = lspc.client_capabilites,
   }
 
@@ -1324,10 +1359,8 @@ end
 function LanguageServer.new(ls_conf)
   local ls = {
     name = ls_conf.name,
-    cmd = ls_conf.cmd,
-    settings = ls_conf.settings,
-    roots = ls_conf.roots,
-    formatting_options = ls_conf.formatting_options,
+    conf = ls_conf,
+
     initialized = false,
     id = 0,
     inflight = {},
@@ -1635,7 +1668,7 @@ vis:command_register('lspc-format', function(argv, _, win)
 
   local params = {
     textDocument = {uri = path_to_uri(win.file.path)},
-    options = ls.formatting_options,
+    options = ls.conf.formatting_options,
   }
   if params.options == nil then
     params.options = {
