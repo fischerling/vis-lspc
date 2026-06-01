@@ -2,6 +2,8 @@
 
 A language server protocol client for the [`vis` editor](https://github.com/martanne/vis).
 
+## This repository is abandoned. The upstream moved to [codeberg.org](https://codeberg.org/muhq/vis-lspc).
+
 ## What's working
 
 `vis-lspc` currently supports:
